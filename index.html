@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css?v=4.3">
+    <link rel="stylesheet" href="assets/style.css?v=4.5">
 </head>
 <body>
 
@@ -149,7 +149,17 @@
                 </ul>
             </div>
 
-            <button id="btn-start-game" class="btn-start-game">START CONCIËRGE DIENST (00:00)</button>
+            <!-- Player Name Input for Leaderboard Tracking -->
+            <div style="margin-bottom: 12px; width: 100%; max-width: 380px; margin-left: auto; margin-right: auto;">
+                <label for="start-player-name" style="display: block; font-size: 11px; color: var(--cctv-amber); margin-bottom: 4px; text-align: left; font-weight: bold;">👤 CONCIËRGE NAAM (VOOR LEADERBOARD):</label>
+                <input type="text" id="start-player-name" maxlength="20" placeholder="Vul je naam in..." class="cctv-input" style="width: 100%;">
+            </div>
+
+            <!-- Start Buttons: Standard Night Shift & Endless Mode -->
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; max-width: 440px; margin-left: auto; margin-right: auto;">
+                <button id="btn-start-game" class="btn-start-game" style="flex: 1; min-width: 170px;">START DIENST (TOT 06:00)</button>
+                <button id="btn-start-endless" class="btn-start-game btn-start-endless" style="flex: 1; min-width: 170px;">♾️ ENDLESS MODUS</button>
+            </div>
         </div>
     </div>
 
@@ -199,14 +209,17 @@
             <div id="victory-save-status" style="font-size: 11px; margin-top: 6px;"></div>
         </div>
 
-        <button id="btn-restart-victory" class="btn-replay">NIEUWE DIENST STARTEN</button>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="btn-restart-victory" class="btn-replay">STANDAARD DIENST</button>
+            <button id="btn-restart-victory-endless" class="btn-replay btn-start-endless">PROBEER ENDLESS MODUS ♾️</button>
+        </div>
     </div>
 
     <!-- Leaderboard Modal -->
     <div id="leaderboard-modal" class="modal-overlay">
         <div class="modal-card" style="max-width: 650px;">
             <h2>🏆 ERELIJST CONCIËRGES // HIGH SCORES</h2>
-            <p style="font-size: 12px; opacity: 0.8;">De beste nachtdiensten en langst overleefde surveillance runs op Elzendaal College:</p>
+            <p style="font-size: 12px; opacity: 0.8;">De beste surveillance runs en langst overleefde conciërge diensten:</p>
 
             <div class="leaderboard-container">
                 <table class="leaderboard-table" id="leaderboard-table">
@@ -214,7 +227,7 @@
                         <tr>
                             <th style="width: 45px;">#</th>
                             <th>CONCIËRGE</th>
-                            <th>TIJD OVERLEEFD</th>
+                            <th>STATUS / TIJD</th>
                             <th>OPGELOST</th>
                             <th>PRECISIE</th>
                             <th>DATUM</th>
@@ -239,6 +252,14 @@
             <h2>⚙️ SURVEILLANCE INSTELLINGEN</h2>
 
             <div style="display: flex; flex-direction: column; gap: 16px; margin: 20px 0;">
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">SPELMODUS:</label>
+                    <select id="setting-gamemode" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+                        <option value="standard" selected>Standaard Nachtdienst (00:00 - 06:00 AM)</option>
+                        <option value="endless">Endless Modus ♾️ (Overleef zo lang mogelijk)</option>
+                    </select>
+                </div>
+
                 <div>
                     <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">DUUR VAN DE NACHT (00:00 - 06:00):</label>
                     <select id="setting-duration" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
@@ -294,7 +315,7 @@
 <script src="assets/audio.js?v=4.1"></script>
 <script src="assets/teacher_manager.js?v=4.1"></script>
 <script src="assets/anomalies_config.js?v=4.1"></script>
-<script src="assets/game.js?v=4.4"></script>
+<script src="assets/game.js?v=4.5"></script>
 
 </body>
 </html>

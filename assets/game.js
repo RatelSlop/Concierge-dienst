@@ -24,6 +24,9 @@ class SchoolSurveillanceGame {
         this.activeAnomalies = [];
         this.overloadTimer = null;
         this.overloadSecondsLeft = 15;
+        this.isEndless = false;
+        this.playerName = localStorage.getItem('concierge_player_name') || '';
+        this.runScoreSaved = false;
 
         // Camera Pan/Zoom State
         this.zoom = 1.0;
@@ -66,6 +69,9 @@ class SchoolSurveillanceGame {
 
     init() {
         this.cacheDOM();
+        if (this.dom.startPlayerName && this.playerName) {
+            this.dom.startPlayerName.value = this.playerName;
+        }
         this.bindEvents();
         this.initNoiseCanvas();
         this.renderCameraButtons();
@@ -112,11 +118,15 @@ class SchoolSurveillanceGame {
             
             // Modals & Screens
             titleScreen: document.getElementById('title-screen-modal'),
+            startPlayerName: document.getElementById('start-player-name'),
             btnStartGame: document.getElementById('btn-start-game'),
+            btnStartEndless: document.getElementById('btn-start-endless'),
             gameOverScreen: document.getElementById('game-over-screen'),
             victoryScreen: document.getElementById('victory-screen'),
             btnRestartGameOver: document.getElementById('btn-restart-gameover'),
             btnRestartVictory: document.getElementById('btn-restart-victory'),
+            btnRestartVictoryEndless: document.getElementById('btn-restart-victory-endless'),
+            shiftProgress: document.querySelector('.osd-shift-progress'),
             
             // Leaderboard & Settings Modals
             leaderboardModal: document.getElementById('leaderboard-modal'),
@@ -138,6 +148,7 @@ class SchoolSurveillanceGame {
             btnCloseSettings: document.getElementById('btn-close-settings'),
             
             // Settings controls
+            selGamemode: document.getElementById('setting-gamemode'),
             selDuration: document.getElementById('setting-duration'),
             selRustfase: document.getElementById('setting-rustfase'),
             selDifficulty: document.getElementById('setting-difficulty'),
@@ -147,10 +158,46 @@ class SchoolSurveillanceGame {
     }
 
     bindEvents() {
-        // Start Game
-        this.dom.btnStartGame.addEventListener('click', () => this.startGame());
-        this.dom.btnRestartGameOver.addEventListener('click', () => this.startGame());
-        this.dom.btnRestartVictory.addEventListener('click', () => this.startGame());
+        // Start Game (Standard vs Endless)
+        if (this.dom.btnStartGame) {
+            this.dom.btnStartGame.addEventListener('click', () => {
+                const name = (this.dom.startPlayerName && this.dom.startPlayerName.value.trim()) || this.playerName;
+                if (name) {
+                    this.playerName = name;
+                    localStorage.setItem('concierge_player_name', name);
+                }
+                this.startGame(false);
+            });
+        }
+
+        if (this.dom.btnStartEndless) {
+            this.dom.btnStartEndless.addEventListener('click', () => {
+                const name = (this.dom.startPlayerName && this.dom.startPlayerName.value.trim()) || this.playerName;
+                if (name) {
+                    this.playerName = name;
+                    localStorage.setItem('concierge_player_name', name);
+                }
+                this.startGame(true);
+            });
+        }
+
+        if (this.dom.btnRestartGameOver) {
+            this.dom.btnRestartGameOver.addEventListener('click', () => {
+                const name = (this.dom.gameoverPlayerName && this.dom.gameoverPlayerName.value.trim()) || this.playerName || 'Conciërge';
+                if (!this.runScoreSaved) {
+                    this.saveRunScore(name, false, this.isEndless, false);
+                }
+                this.startGame(this.isEndless);
+            });
+        }
+
+        if (this.dom.btnRestartVictory) {
+            this.dom.btnRestartVictory.addEventListener('click', () => this.startGame(false));
+        }
+
+        if (this.dom.btnRestartVictoryEndless) {
+            this.dom.btnRestartVictoryEndless.addEventListener('click', () => this.startGame(true));
+        }
 
         // Leaderboard Modals & Score Saving
         this.dom.btnOpenLeaderboard.addEventListener('click', () => {
@@ -161,16 +208,22 @@ class SchoolSurveillanceGame {
         this.dom.btnClearLeaderboard.addEventListener('click', () => this.clearLeaderboard());
 
         this.dom.btnSaveGameoverScore.addEventListener('click', () => {
-            const name = this.dom.gameoverPlayerName.value.trim() || 'Conciërge';
-            this.saveRunScore(name, false);
+            const name = (this.dom.gameoverPlayerName && this.dom.gameoverPlayerName.value.trim()) || this.playerName || 'Conciërge';
+            this.playerName = name;
+            localStorage.setItem('concierge_player_name', name);
+            this.lastRunId = this.saveRunScore(name, false, this.isEndless, true, this.lastRunId);
+            this.runScoreSaved = true;
             this.dom.btnSaveGameoverScore.disabled = true;
-            this.dom.gameoverSaveStatus.textContent = '✅ Score succesvol opgeslagen op het bord!';
+            this.dom.gameoverSaveStatus.textContent = '✅ Resultaat opgeslagen op het bord!';
             this.dom.gameoverSaveStatus.style.color = 'var(--cctv-green)';
         });
 
         this.dom.btnSaveVictoryScore.addEventListener('click', () => {
-            const name = this.dom.victoryPlayerName.value.trim() || 'Meester Conciërge';
-            this.saveRunScore(name, true);
+            const name = (this.dom.victoryPlayerName && this.dom.victoryPlayerName.value.trim()) || this.playerName || 'Meester Conciërge';
+            this.playerName = name;
+            localStorage.setItem('concierge_player_name', name);
+            this.lastRunId = this.saveRunScore(name, true, false, true, this.lastRunId);
+            this.runScoreSaved = true;
             this.dom.btnSaveVictoryScore.disabled = true;
             this.dom.victorySaveStatus.textContent = '🏆 Score vereeuwigd op de erelijst!';
             this.dom.victorySaveStatus.style.color = 'var(--cctv-green)';
@@ -199,6 +252,11 @@ class SchoolSurveillanceGame {
         this.dom.btnCloseSettings.addEventListener('click', () => this.closeModal(this.dom.settingsModal));
 
         // Settings updates
+        if (this.dom.selGamemode) {
+            this.dom.selGamemode.addEventListener('change', (e) => {
+                this.isEndless = e.target.value === 'endless';
+            });
+        }
         this.dom.selDuration.addEventListener('change', (e) => {
             this.settings.nightDurationSeconds = parseInt(e.target.value);
         });
@@ -244,7 +302,23 @@ class SchoolSurveillanceGame {
         window.addEventListener('resize', () => this.resizeNoiseCanvas());
     }
 
-    startGame() {
+    startGame(isEndless = false) {
+        this.isEndless = !!isEndless;
+        this.runScoreSaved = false;
+
+        // Sync dropdown if present
+        if (this.dom.selGamemode) {
+            this.dom.selGamemode.value = this.isEndless ? 'endless' : 'standard';
+        }
+
+        // Grab player name from start input if provided
+        if (this.dom.startPlayerName && this.dom.startPlayerName.value.trim()) {
+            this.playerName = this.dom.startPlayerName.value.trim();
+            localStorage.setItem('concierge_player_name', this.playerName);
+        } else {
+            this.playerName = localStorage.getItem('concierge_player_name') || '';
+        }
+
         this.audio.init();
         this.audio.setDangerLevel(0);
         this.dom.titleScreen.style.display = 'none';
@@ -266,17 +340,24 @@ class SchoolSurveillanceGame {
         if (this.overloadTimer) clearInterval(this.overloadTimer);
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
 
-        // Reset score form states
-        if (this.dom.gameoverPlayerName) this.dom.gameoverPlayerName.value = '';
+        // Pre-fill player name into game over & victory inputs
+        if (this.dom.gameoverPlayerName) this.dom.gameoverPlayerName.value = this.playerName;
         if (this.dom.gameoverSaveStatus) this.dom.gameoverSaveStatus.textContent = '';
         if (this.dom.btnSaveGameoverScore) this.dom.btnSaveGameoverScore.disabled = false;
-        if (this.dom.victoryPlayerName) this.dom.victoryPlayerName.value = '';
+        if (this.dom.victoryPlayerName) this.dom.victoryPlayerName.value = this.playerName;
         if (this.dom.victorySaveStatus) this.dom.victorySaveStatus.textContent = '';
         if (this.dom.btnSaveVictoryScore) this.dom.btnSaveVictoryScore.disabled = false;
 
         this.resetPanZoom();
         this.showCamera(0);
         this.updateThreatLevelDisplay();
+
+        // Update shift indicator on OSD
+        if (this.dom.shiftProgress) {
+            this.dom.shiftProgress.textContent = this.isEndless 
+                ? '♾️ ENDLESS MODUS // OVERLEEF ZO LANG MOGELIJK'
+                : 'CONCIËRGE NACHTDIENST 00:00 - 06:00 AM';
+        }
 
         // Start clock
         if (this.clockInterval) clearInterval(this.clockInterval);
@@ -286,11 +367,11 @@ class SchoolSurveillanceGame {
         if (rustThreshold <= 0) {
             // Instant action
             this.anomaliesStarted = true;
-            this.showToast('DIENST GESTART - 00:00 AM // HOUD DE CAMERA\'S IN DE GATEN!');
+            this.showToast(this.isEndless ? '♾️ ENDLESS DIENST GESTART - OVERLEEF ZO LANG MOGELIJK!' : 'DIENST GESTART - 00:00 AM // HOUD DE CAMERA\'S IN DE GATEN!');
             this.spawnRandomAnomaly();
             this.scheduleNextAnomaly();
         } else {
-            this.showToast(`DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERA'S (START OM 00:45 AM)`);
+            this.showToast(this.isEndless ? '♾️ ENDLESS MODUS GESTART // RUSTFASE TOT 00:45 AM' : `DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERA'S (START OM 00:45 AM)`);
         }
     }
 
@@ -300,19 +381,31 @@ class SchoolSurveillanceGame {
         this.gameTimeSeconds += 1;
         const progress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
         
-        // Convert to simulated in-game time from 00:00 to 06:00
+        // Convert to simulated in-game time from 00:00
         const totalSimulatedSeconds = progress * (6 * 3600);
-        const simHours = Math.floor(totalSimulatedSeconds / 3600);
+        const totalSimHours = Math.floor(totalSimulatedSeconds / 3600);
+        const simHours = totalSimHours % 24;
         const simMins = Math.floor((totalSimulatedSeconds % 3600) / 60);
         const simSecs = Math.floor(totalSimulatedSeconds % 60);
 
         const pad = (n) => String(n).padStart(2, '0');
-        this.dom.clockTime.textContent = `${pad(simHours)}:${pad(simMins)}:${pad(simSecs)} AM`;
+        const ampm = simHours >= 12 ? 'PM' : 'AM';
+        this.dom.clockTime.textContent = `${pad(simHours)}:${pad(simMins)}:${pad(simSecs)} ${ampm}`;
 
-        // Check for victory at 06:00 AM!
-        if (this.gameTimeSeconds >= this.settings.nightDurationSeconds) {
+        // Check for victory at 06:00 AM! (Only in standard mode)
+        if (!this.isEndless && this.gameTimeSeconds >= this.settings.nightDurationSeconds) {
             this.triggerVictory();
             return;
+        }
+
+        // In endless mode, celebrate passing 06:00 AM!
+        if (this.isEndless && this.gameTimeSeconds === this.settings.nightDurationSeconds) {
+            this.showToast('🏆 06:00 AM BEREIKT! ENDLESS OVERLEVING GAAT DOOR...', 'success');
+            this.audio.playVictoryBell();
+        }
+
+        if (this.isEndless && totalSimHours >= 6 && this.dom.shiftProgress) {
+            this.dom.shiftProgress.textContent = `♾️ ENDLESS SURVIVAL // ${totalSimHours}u ${pad(simMins)}m OVERLEEFD`;
         }
 
         // Rustfase check: transition to active anomalies at 00:45 AM
@@ -382,9 +475,9 @@ class SchoolSurveillanceGame {
             baseDelay = Math.min(baseDelay, 7);
         }
 
-        // Later in the night (03:00+), increase frequency (up to 30% faster)
+        // Later in the night (03:00+), increase frequency (up to 40% faster in endless)
         const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
-        const speedMultiplier = 1.0 - (nightProgress * 0.30);
+        const speedMultiplier = Math.max(0.45, 1.0 - (Math.min(2.0, nightProgress) * 0.30));
 
         const delay = (baseDelay * speedMultiplier + (Math.random() * 3 - 1.5)) * 1000;
 
@@ -973,11 +1066,32 @@ class SchoolSurveillanceGame {
         clearTimeout(this.spawnTimeout);
         this.audio.playGameOver();
 
+        const timeSurvivedText = this.dom.clockTime.textContent;
         document.getElementById('gameover-reason').textContent = reason;
-        document.getElementById('stat-time-survived').textContent = this.dom.clockTime.textContent;
+        document.getElementById('stat-time-survived').textContent = timeSurvivedText;
         document.getElementById('stat-reports-sent').textContent = this.stats.reportsTotal;
         document.getElementById('stat-success-rate').textContent = this.stats.reportsTotal > 0 
             ? Math.round((this.stats.reportsSuccess / this.stats.reportsTotal) * 100) + '%' : '0%';
+
+        // Get player name and ensure it's displayed
+        const playerName = (this.dom.gameoverPlayerName && this.dom.gameoverPlayerName.value.trim())
+            || (this.dom.startPlayerName && this.dom.startPlayerName.value.trim())
+            || this.playerName
+            || 'Conciërge';
+
+        this.playerName = playerName;
+        if (this.dom.gameoverPlayerName) {
+            this.dom.gameoverPlayerName.value = playerName;
+        }
+
+        // Automatically record the defeat on the leaderboard!
+        this.lastRunId = this.saveRunScore(playerName, false, this.isEndless, false);
+        this.runScoreSaved = true;
+
+        if (this.dom.gameoverSaveStatus) {
+            this.dom.gameoverSaveStatus.textContent = `✅ Resultaat genoteerd op bord als: ${playerName}`;
+            this.dom.gameoverSaveStatus.style.color = 'var(--cctv-green)';
+        }
 
         this.dom.gameOverScreen.style.display = 'flex';
     }
@@ -992,6 +1106,25 @@ class SchoolSurveillanceGame {
         document.getElementById('stat-vic-accuracy').textContent = this.stats.reportsTotal > 0 
             ? Math.round((this.stats.reportsSuccess / this.stats.reportsTotal) * 100) + '%' : '100%';
         document.getElementById('stat-vic-anomalies').textContent = this.stats.reportsSuccess;
+
+        const playerName = (this.dom.victoryPlayerName && this.dom.victoryPlayerName.value.trim())
+            || (this.dom.startPlayerName && this.dom.startPlayerName.value.trim())
+            || this.playerName
+            || 'Meester Conciërge';
+
+        this.playerName = playerName;
+        if (this.dom.victoryPlayerName) {
+            this.dom.victoryPlayerName.value = playerName;
+        }
+
+        // Automatically record the victory on the leaderboard!
+        this.lastRunId = this.saveRunScore(playerName, true, false, false);
+        this.runScoreSaved = true;
+
+        if (this.dom.victorySaveStatus) {
+            this.dom.victorySaveStatus.textContent = `🏆 Overwinning genoteerd op de erelijst als: ${playerName}`;
+            this.dom.victorySaveStatus.style.color = 'var(--cctv-green)';
+        }
 
         this.dom.victoryScreen.style.display = 'flex';
     }
@@ -1065,52 +1198,94 @@ class SchoolSurveillanceGame {
 
     // Leaderboard System
     loadLeaderboard() {
-        const stored = localStorage.getItem('concierge_leaderboard_v1');
-        if (stored) {
-            try { return JSON.parse(stored); } catch(e) {}
+        const dummyNames = ['Hoofdconciërge Bert', 'Conciërge Theo', 'Stagiair Rick', 'Avondconciërge Jan'];
+        const cleanList = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr.filter(item => item && item.name && !dummyNames.includes(item.name.trim()));
+        };
+
+        const storedV2 = localStorage.getItem('concierge_leaderboard_v2');
+        if (storedV2) {
+            try {
+                return cleanList(JSON.parse(storedV2));
+            } catch(e) {}
         }
-        return [
-            { name: 'Hoofdconciërge Bert', timeSurvived: '06:00 AM (OVERLEEFD)', survivedSeconds: 360, reportsSuccess: 9, accuracy: 100, date: 'Vast rooster', victory: true },
-            { name: 'Conciërge Theo', timeSurvived: '05:18 AM', survivedSeconds: 318, reportsSuccess: 7, accuracy: 88, date: 'Ochtendploeg', victory: false },
-            { name: 'Stagiair Rick', timeSurvived: '03:42 AM', survivedSeconds: 222, reportsSuccess: 4, accuracy: 75, date: 'Nachtdienst', victory: false },
-            { name: 'Avondconciërge Jan', timeSurvived: '02:15 AM', survivedSeconds: 135, reportsSuccess: 2, accuracy: 50, date: 'Vrijdagavond', victory: false }
-        ];
+
+        // Migrate from v1 if present, but strictly remove any preset dummy names
+        const storedV1 = localStorage.getItem('concierge_leaderboard_v1');
+        if (storedV1) {
+            try {
+                const migrated = cleanList(JSON.parse(storedV1));
+                localStorage.setItem('concierge_leaderboard_v2', JSON.stringify(migrated));
+                localStorage.removeItem('concierge_leaderboard_v1');
+                return migrated;
+            } catch(e) {}
+        }
+
+        // Strictly empty by default - no preset dummy names!
+        return [];
     }
 
-    saveRunScore(playerName, isVictory) {
+    saveRunScore(playerName, isVictory, isEndless = false, showModal = true, existingId = null) {
         const list = this.loadLeaderboard();
         const total = Math.max(1, this.stats.reportsTotal);
         const acc = Math.round((this.stats.reportsSuccess / total) * 100);
         const clockStr = this.dom.clockTime.textContent;
-        const timeLabel = isVictory ? '06:00 AM (OVERLEEFD)' : clockStr;
+
+        let timeLabel = clockStr;
+        if (isVictory) {
+            timeLabel = '06:00 AM (OVERLEEFD)';
+        } else if (isEndless) {
+            timeLabel = `${clockStr} (Endless)`;
+        }
+
         const now = new Date();
         const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth()+1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-        const entry = {
-            id: 'run_' + Date.now(),
-            name: playerName,
-            timeSurvived: timeLabel,
-            survivedSeconds: this.gameTimeSeconds,
-            reportsSuccess: this.stats.reportsSuccess,
-            accuracy: isVictory && this.stats.reportsTotal === 0 ? 100 : acc,
-            date: dateStr,
-            victory: isVictory
-        };
+        let entryId = existingId;
+        const existingIdx = existingId ? list.findIndex(e => e.id === existingId) : -1;
 
-        list.push(entry);
-        // Sort: victory runs first, then survivedSeconds desc, then accuracy desc
+        if (existingIdx !== -1) {
+            // Update existing entry if user customized their name
+            list[existingIdx].name = playerName;
+            list[existingIdx].timeSurvived = timeLabel;
+            list[existingIdx].survivedSeconds = this.gameTimeSeconds;
+            list[existingIdx].reportsSuccess = this.stats.reportsSuccess;
+            list[existingIdx].accuracy = isVictory && this.stats.reportsTotal === 0 ? 100 : acc;
+            list[existingIdx].victory = isVictory;
+            list[existingIdx].isEndless = isEndless;
+        } else {
+            entryId = 'run_' + Date.now();
+            const entry = {
+                id: entryId,
+                name: playerName,
+                timeSurvived: timeLabel,
+                survivedSeconds: this.gameTimeSeconds,
+                reportsSuccess: this.stats.reportsSuccess,
+                accuracy: isVictory && this.stats.reportsTotal === 0 ? 100 : acc,
+                date: dateStr,
+                victory: isVictory,
+                isEndless: isEndless
+            };
+            list.push(entry);
+        }
+
+        // Sort: longest survivedSeconds first, then highest accuracy
         list.sort((a, b) => {
-            if (a.victory !== b.victory) return b.victory ? 1 : -1;
             if (b.survivedSeconds !== a.survivedSeconds) return b.survivedSeconds - a.survivedSeconds;
             return b.accuracy - a.accuracy;
         });
 
-        // Save top 20
-        const topList = list.slice(0, 20);
-        localStorage.setItem('concierge_leaderboard_v1', JSON.stringify(topList));
+        // Save top 25
+        const topList = list.slice(0, 25);
+        localStorage.setItem('concierge_leaderboard_v2', JSON.stringify(topList));
+        localStorage.removeItem('concierge_leaderboard_v1');
 
-        this.renderLeaderboard(entry.id);
-        this.openModal(this.dom.leaderboardModal);
+        this.renderLeaderboard(entryId);
+        if (showModal) {
+            this.openModal(this.dom.leaderboardModal);
+        }
+        return entryId;
     }
 
     renderLeaderboard(highlightId = null) {
@@ -1120,7 +1295,7 @@ class SchoolSurveillanceGame {
         tbody.innerHTML = '';
 
         if (list.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777; padding: 20px;">Nog geen conciërge runs geregistreerd.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777; padding: 25px; font-style: italic;">Nog geen conciërge runs geregistreerd.<br><span style="font-size: 11px; opacity: 0.8;">Start een dienst om je naam op het bord te zetten!</span></td></tr>`;
             return;
         }
 
@@ -1139,17 +1314,22 @@ class SchoolSurveillanceGame {
             else if (idx === 1) rankBadge = `<span class="rank-silver">🥈 2</span>`;
             else if (idx === 2) rankBadge = `<span class="rank-bronze">🥉 3</span>`;
 
-            const statusBadge = entry.victory 
-                ? `<span class="badge-survived">06:00 OVERLEEFD</span>`
-                : `<span class="badge-failed">${entry.timeSurvived}</span>`;
+            let statusBadge = '';
+            if (entry.isEndless) {
+                statusBadge = `<span class="badge-endless">♾️ ${escapeHTML(entry.timeSurvived)}</span>`;
+            } else if (entry.victory) {
+                statusBadge = `<span class="badge-survived">🏆 06:00 OVERLEEFD</span>`;
+            } else {
+                statusBadge = `<span class="badge-failed">❌ ${escapeHTML(entry.timeSurvived)}</span>`;
+            }
 
             tr.innerHTML = `
                 <td>${rankBadge}</td>
                 <td><strong>${escapeHTML(entry.name)}</strong></td>
                 <td>${statusBadge}</td>
-                <td style="color: var(--cctv-green);">${entry.reportsSuccess} opgelost</td>
-                <td>${entry.accuracy}%</td>
-                <td style="font-size: 11px; opacity: 0.7;">${entry.date}</td>
+                <td style="color: var(--cctv-green);">${entry.reportsSuccess || 0} opgelost</td>
+                <td>${entry.accuracy || 0}%</td>
+                <td style="font-size: 11px; opacity: 0.7;">${entry.date || '-'}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -1157,6 +1337,7 @@ class SchoolSurveillanceGame {
 
     clearLeaderboard() {
         if (confirm('Weet je zeker dat je het conciërge leaderboard wilt wissen?')) {
+            localStorage.removeItem('concierge_leaderboard_v2');
             localStorage.removeItem('concierge_leaderboard_v1');
             this.renderLeaderboard();
             this.showToast('Scorebord gewist.');
