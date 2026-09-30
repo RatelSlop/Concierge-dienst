@@ -773,7 +773,7 @@ class SchoolSurveillanceGame {
         
         this.panX = Math.max(-maxPanX, Math.min(maxPanX, e.clientX - this.dragStartX));
         this.panY = Math.max(-maxPanY, Math.min(maxPanY, e.clientY - this.dragStartY));
-        this.applyPanZoom();
+        this.applyPanZoom(true);
     }
 
     handleMouseUp() {
@@ -784,7 +784,7 @@ class SchoolSurveillanceGame {
         this.zoom = 1.0;
         this.panX = 0;
         this.panY = 0;
-        this.applyPanZoom();
+        this.applyPanZoom(false);
     }
 
     // Mobile Touch Gesture Handlers (Swipe camera, pinch-zoom, pan, double-tap reset)
@@ -839,12 +839,12 @@ class SchoolSurveillanceGame {
                 const maxPanY = (this.dom.viewport.clientHeight * (this.zoom - 1)) / 2;
                 this.panX = Math.max(-maxPanX, Math.min(maxPanX, touch.clientX - this.dragStartX));
                 this.panY = Math.max(-maxPanY, Math.min(maxPanY, touch.clientY - this.dragStartY));
-                this.applyPanZoom();
+                this.applyPanZoom(true);
             } else if (this.zoom === 1.0 && this.touchStartX !== null) {
                 // If user is swiping horizontally on unzoomed camera, prevent browser navigation/scrolling
                 const dx = Math.abs(touch.clientX - this.touchStartX);
                 const dy = Math.abs(touch.clientY - this.touchStartY);
-                if (dx > 12 && dx > dy && e.cancelable) {
+                if (dx > 10 && dx > dy && e.cancelable) {
                     e.preventDefault();
                 }
             }
@@ -860,17 +860,22 @@ class SchoolSurveillanceGame {
                     this.panX = 0;
                     this.panY = 0;
                 }
-                this.applyPanZoom();
+                this.applyPanZoom(true);
             }
         }
     }
 
     handleTouchEnd(e) {
+        if (e && e.changedTouches && e.changedTouches.length > 0) {
+            this.touchCurrentX = e.changedTouches[0].clientX;
+            this.touchCurrentY = e.changedTouches[0].clientY;
+        }
+
         if (this.zoom === 1.0 && this.touchStartX !== null && this.touchCurrentX !== null) {
             const deltaX = this.touchCurrentX - this.touchStartX;
             const deltaY = this.touchCurrentY - this.touchStartY;
-            // Horizontal swipe detection (> 40px, more horizontal than vertical)
-            if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+            // Horizontal swipe detection (> 30px threshold, horizontal dominance)
+            if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.1) {
                 if (deltaX < 0) {
                     // Swipe left -> Next camera
                     this.showCamera((this.currentCamIndex + 1) % this.cameras.length);
@@ -889,7 +894,12 @@ class SchoolSurveillanceGame {
         this.initialPinchDist = null;
     }
 
-    applyPanZoom() {
+    applyPanZoom(immediate = false) {
+        if (immediate) {
+            this.dom.feedContainer.style.transition = 'none';
+        } else {
+            this.dom.feedContainer.style.transition = 'transform 0.18s cubic-bezier(0.2, 0.9, 0.4, 1)';
+        }
         this.dom.feedContainer.style.transform = `scale(${this.zoom}) translate(${this.panX / this.zoom}px, ${this.panY / this.zoom}px)`;
     }
 
@@ -902,37 +912,50 @@ class SchoolSurveillanceGame {
         if (mode === 'raw') img.classList.add('filter-raw');
     }
 
-    // Noise Generator Canvas
+    // High Performance Static Noise Generator (Pre-computed frames, zero GC pauses)
     initNoiseCanvas() {
         this.noiseCanvas = this.dom.noiseCanvas;
         this.noiseCtx = this.noiseCanvas.getContext('2d');
+        this.noiseFrames = [];
+        this.noiseFrameIndex = 0;
+        this.lastNoiseTime = 0;
         this.resizeNoiseCanvas();
         this.renderNoiseLoop();
     }
 
     resizeNoiseCanvas() {
-        if (!this.noiseCanvas) return;
-        this.noiseCanvas.width = Math.floor(window.innerWidth / 3);
-        this.noiseCanvas.height = Math.floor(window.innerHeight / 3);
+        if (!this.noiseCanvas || !this.noiseCtx) return;
+        const w = 240;
+        const h = 135;
+        this.noiseCanvas.width = w;
+        this.noiseCanvas.height = h;
+
+        this.noiseFrames = [];
+        for (let f = 0; f < 5; f++) {
+            const imgData = this.noiseCtx.createImageData(w, h);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const val = (Math.random() * 255) | 0;
+                data[i] = val;
+                data[i + 1] = val;
+                data[i + 2] = val;
+                data[i + 3] = 40; // subtle authentic CRT grain
+            }
+            this.noiseFrames.push(imgData);
+        }
     }
 
-    renderNoiseLoop() {
-        if (!this.noiseCtx) return;
-        const w = this.noiseCanvas.width;
-        const h = this.noiseCanvas.height;
-        const imgData = this.noiseCtx.createImageData(w, h);
-        const data = imgData.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-            const val = (Math.random() * 255) | 0;
-            data[i] = val;
-            data[i+1] = val;
-            data[i+2] = val;
-            data[i+3] = 45; // subtle transparency
+    renderNoiseLoop(timestamp) {
+        if (!this.noiseCtx || !this.noiseFrames || this.noiseFrames.length === 0) return;
+        
+        // Refresh noise at ~15 FPS to eliminate CPU drain and keep touch 60 FPS smooth
+        if (!timestamp || timestamp - this.lastNoiseTime > 60) {
+            this.lastNoiseTime = timestamp || 0;
+            this.noiseFrameIndex = (this.noiseFrameIndex + 1) % this.noiseFrames.length;
+            this.noiseCtx.putImageData(this.noiseFrames[this.noiseFrameIndex], 0, 0);
         }
 
-        this.noiseCtx.putImageData(imgData, 0, 0);
-        requestAnimationFrame(() => this.renderNoiseLoop());
+        requestAnimationFrame((t) => this.renderNoiseLoop(t));
     }
 
     // End Game Screens
@@ -970,10 +993,17 @@ class SchoolSurveillanceGame {
         const container = this.dom.camNavGroup;
         container.innerHTML = '';
 
+        const shortNames = [
+            'Kluisjes',
+            'Fietsen',
+            'B011',
+            'Trap'
+        ];
+
         this.cameras.forEach((cam, idx) => {
             const btn = document.createElement('button');
             btn.className = 'cam-btn' + (idx === 0 ? ' active' : '');
-            btn.innerHTML = `<span class="cam-key-hint">${idx + 1}</span> ${cam.name.toUpperCase()}`;
+            btn.innerHTML = `<span class="cam-key-hint">${idx + 1}</span> <span class="cam-btn-name">${shortNames[idx] || cam.name}</span>`;
             btn.addEventListener('click', () => this.showCamera(idx));
             container.appendChild(btn);
         });

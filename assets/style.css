@@ -19,6 +19,10 @@
     -webkit-user-select: none;
 }
 
+button {
+    touch-action: manipulation;
+}
+
 body, html {
     width: 100%;
     height: 100%;
@@ -48,16 +52,19 @@ body, html {
     flex: 1;
     position: relative;
     overflow: hidden;
-    background: #050708;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 0;
 }
 
 /* Camera Viewport Canvas & Container */
 #camera-viewport {
     width: 100%;
-    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 16 / 9;
     position: relative;
     overflow: hidden;
     cursor: grab;
@@ -77,13 +84,12 @@ body, html {
     top: 0;
     left: 0;
     transform-origin: center center;
-    transition: transform 0.05s ease-out;
 }
 
 #camera-base-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: fill;
     display: block;
     pointer-events: none;
     transition: filter 0.3s ease;
@@ -1225,87 +1231,110 @@ body, html {
 }
 
 /* ==========================================================================
-   MOBILE & RESPONSIVE DESIGN (< 768px & < 400px)
+   MOBILE & RESPONSIVE DESIGN (< 768px & Orientation Queries)
    ========================================================================== */
 
 @media (max-width: 768px) {
+    /* Monitor & CCTV Canvas */
+    #cctv-monitor {
+        flex: 1;
+        min-height: 0;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    #camera-viewport {
+        width: 100vw;
+        max-width: 100vw;
+        max-height: 100%;
+        aspect-ratio: 16 / 9;
+        margin: auto;
+    }
+
     /* Top OSD Header & Clock */
-    #osd-header {
-        padding: 8px 12px;
+    #cctv-osd {
+        padding: 6px 10px;
+        font-size: 11px;
+        letter-spacing: 1px;
     }
 
     .osd-rec-box {
-        font-size: 11px;
-        gap: 6px;
+        font-size: 10px;
+        gap: 4px;
     }
 
     .rec-dot {
-        width: 8px;
-        height: 8px;
+        width: 7px;
+        height: 7px;
     }
 
     .osd-cam-title {
-        font-size: 13px;
+        font-size: 11px;
     }
 
     .osd-cam-code {
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .osd-cam-error {
-        font-size: 9px;
-        padding: 1px 5px;
-        margin-left: 5px;
-    }
-
-    #osd-footer {
-        padding: 8px 12px;
+        font-size: 8.5px;
+        padding: 1px 4px;
+        margin-left: 4px;
     }
 
     .osd-time-main {
-        font-size: 18px;
+        font-size: 15px;
         letter-spacing: 1px;
     }
 
     .osd-shift-progress {
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .threat-badge {
-        font-size: 10px;
-        padding: 3px 6px;
+        font-size: 9.5px;
+        padding: 2px 5px;
     }
 
     /* Bottom Control Dock */
     #control-dock {
         height: auto;
-        min-height: 98px;
-        padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
+        min-height: 74px;
+        padding: 4px 6px calc(6px + env(safe-area-inset-bottom, 0px)) 6px;
         display: grid;
         grid-template-columns: 1fr auto;
         grid-template-rows: auto auto;
-        gap: 6px;
+        gap: 4px;
+        background: #090c0f;
+        border-top: 1px solid #16241b;
     }
 
     .camera-nav-group {
         grid-column: 1 / -1;
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 5px;
+        gap: 4px;
         width: 100%;
     }
 
     .cam-btn {
-        padding: 8px 2px;
+        padding: 5px 2px;
         font-size: 11px;
         justify-content: center;
         text-align: center;
         border-radius: 4px;
-        min-height: 40px;
+        min-height: 34px;
     }
 
     .cam-key-hint {
         display: none !important;
+    }
+
+    .cam-btn-name {
+        font-size: 11px;
     }
 
     .report-action-group {
@@ -1317,10 +1346,10 @@ body, html {
     .btn-report-main {
         width: 100%;
         justify-content: center;
-        padding: 9px 8px;
-        font-size: 13px;
-        letter-spacing: 0.8px;
-        min-height: 42px;
+        padding: 7px 8px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+        min-height: 36px;
     }
 
     .btn-report-main .cam-key-hint {
@@ -1330,14 +1359,14 @@ body, html {
     .utility-group {
         grid-column: 2 / 3;
         display: flex;
-        gap: 5px;
+        gap: 4px;
     }
 
     .util-btn {
-        padding: 8px 10px;
-        font-size: 11px;
+        padding: 7px 8px;
+        font-size: 10.5px;
         white-space: nowrap;
-        min-height: 42px;
+        min-height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1349,45 +1378,45 @@ body, html {
         max-width: 100vw;
         left: 0;
         transform: none;
-        border-radius: 14px 14px 0 0;
-        padding: 14px 12px calc(14px + env(safe-area-inset-bottom, 0px)) 12px;
-        max-height: 85vh;
-        max-height: 85dvh;
+        border-radius: 12px 12px 0 0;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px)) 10px;
+        max-height: 78vh;
+        max-height: 78dvh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         box-sizing: border-box;
     }
 
     .tablet-header {
-        padding-bottom: 8px;
-        margin-bottom: 12px;
+        padding-bottom: 5px;
+        margin-bottom: 6px;
     }
 
     .tablet-title {
-        font-size: 12px;
-        gap: 6px;
+        font-size: 11px;
+        gap: 4px;
     }
 
     .btn-close-tablet {
-        font-size: 22px;
-        padding: 4px 8px;
+        font-size: 18px;
+        padding: 2px 6px;
     }
 
     .report-section-title {
-        font-size: 11px;
-        margin-bottom: 6px;
+        font-size: 10px;
+        margin-bottom: 3px;
     }
 
     .room-selector-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-        margin-bottom: 12px;
+        gap: 4px;
+        margin-bottom: 6px;
     }
 
     .room-opt-btn {
-        min-height: 44px;
-        padding: 8px 4px;
-        font-size: 11px;
+        min-height: 35px;
+        padding: 5px 2px;
+        font-size: 10.5px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1395,49 +1424,66 @@ body, html {
 
     .category-selector-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-        margin-bottom: 14px;
+        gap: 4px;
+        margin-bottom: 8px;
     }
 
     .cat-opt-btn {
-        min-height: 48px;
-        padding: 8px 6px;
-        font-size: 11px;
+        min-height: 36px;
+        padding: 4px 4px;
+        font-size: 10px;
         display: flex;
         flex-direction: row;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 5px;
     }
 
     .cat-opt-icon {
-        font-size: 18px;
+        font-size: 14px;
     }
 
     .btn-send-report {
-        padding: 12px;
-        font-size: 14px;
-        min-height: 46px;
+        padding: 8px;
+        font-size: 12px;
+        min-height: 36px;
     }
 
     /* Modal dialogs */
     .modal-card {
-        width: 94vw;
-        max-width: 94vw;
-        max-height: 88vh;
-        max-height: 88dvh;
-        padding: 18px 14px;
+        width: 95vw;
+        max-width: 95vw;
+        max-height: 85vh;
+        max-height: 85dvh;
+        padding: 12px 10px;
+        font-size: 11px;
     }
 
     .modal-card h2 {
-        font-size: 17px;
-        margin-bottom: 10px;
-        padding-bottom: 6px;
+        font-size: 14px;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
+    }
+
+    .modal-card h3 {
+        font-size: 11.5px;
+        margin: 6px 0 3px;
+    }
+
+    .modal-card p {
+        font-size: 10.5px;
+        margin-bottom: 6px;
+    }
+
+    .btn-modal-close {
+        font-size: 10.5px;
+        padding: 6px 12px;
+        margin-top: 8px;
     }
 
     /* Title / Start Screen */
     #title-screen-modal {
-        padding: 12px;
+        padding: 8px;
     }
 
     .title-box {
@@ -1445,124 +1491,125 @@ body, html {
     }
 
     .title-logo-icon {
-        font-size: 36px;
-        margin-bottom: 4px;
+        font-size: 24px;
+        margin-bottom: 2px;
     }
 
     .title-main {
-        font-size: 22px;
-        letter-spacing: 1.5px;
-        margin-bottom: 4px;
+        font-size: 16px;
+        letter-spacing: 1px;
+        margin-bottom: 2px;
     }
 
     .title-sub {
-        font-size: 11px;
-        letter-spacing: 1px;
-        margin-bottom: 14px;
+        font-size: 9.5px;
+        letter-spacing: 0.5px;
+        margin-bottom: 6px;
     }
 
     .title-instructions {
-        padding: 12px 14px;
-        font-size: 11px;
-        line-height: 1.45;
-        margin-bottom: 14px;
-        max-height: 45vh;
-        max-height: 45dvh;
+        padding: 8px 10px;
+        font-size: 10px;
+        line-height: 1.35;
+        margin-bottom: 8px;
+        max-height: 42vh;
+        max-height: 42dvh;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
 
     .title-instructions ul {
-        margin-left: 16px;
-        margin-top: 6px;
+        margin-left: 12px;
+        margin-top: 3px;
     }
 
     .title-instructions li {
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     .btn-start-game {
-        font-size: 15px;
-        padding: 12px 20px;
+        font-size: 13px;
+        padding: 9px 16px;
         letter-spacing: 1px;
         width: 100%;
+        min-height: 38px;
         box-sizing: border-box;
     }
 
     /* Game Over & Victory Screens */
     #game-over-screen, #victory-screen {
-        padding: 14px;
+        padding: 10px;
     }
 
     #game-over-screen h1, #victory-screen h1 {
-        font-size: 26px;
-        letter-spacing: 1.5px;
-        margin-bottom: 6px;
+        font-size: 18px;
+        letter-spacing: 1px;
+        margin-bottom: 3px;
     }
 
     #gameover-reason, #victory-screen p {
-        font-size: 13px;
-        margin-bottom: 12px;
+        font-size: 11px;
+        margin-bottom: 6px;
     }
 
     .stats-card {
-        padding: 12px 14px;
-        font-size: 12px;
-        line-height: 1.6;
+        padding: 8px 10px;
+        font-size: 10.5px;
+        line-height: 1.45;
         min-width: auto;
         width: 100%;
-        max-width: 340px;
-        margin: 10px 0;
+        max-width: 290px;
+        margin: 6px 0;
         box-sizing: border-box;
     }
 
     .name-entry-card {
-        padding: 12px 14px;
+        padding: 8px 10px;
         min-width: auto;
         width: 100%;
-        max-width: 340px;
-        margin: 8px 0 14px;
+        max-width: 290px;
+        margin: 6px 0 10px;
         box-sizing: border-box;
     }
 
     .name-entry-card > div[style*="display: flex"] {
         flex-direction: column !important;
-        gap: 8px !important;
+        gap: 6px !important;
     }
 
     .cctv-input {
         width: 100%;
-        font-size: 13px;
-        padding: 9px 12px;
+        font-size: 11px;
+        padding: 6px 8px;
         box-sizing: border-box;
     }
 
     .btn-save-score {
         width: 100%;
-        font-size: 12px;
-        padding: 10px;
+        font-size: 10.5px;
+        padding: 7px 10px;
         text-align: center;
         box-sizing: border-box;
     }
 
     .btn-replay {
         width: 100%;
-        max-width: 280px;
-        font-size: 14px;
-        padding: 12px 20px;
+        max-width: 250px;
+        font-size: 12px;
+        padding: 8px 16px;
         box-sizing: border-box;
     }
 
     /* Leaderboard Modal on Mobile */
     .leaderboard-container {
-        max-height: 48vh;
-        max-height: 48dvh;
-        margin: 10px 0;
+        max-height: 45vh;
+        max-height: 45dvh;
+        margin: 8px 0;
     }
 
     .leaderboard-table th, .leaderboard-table td {
-        padding: 8px 6px;
-        font-size: 11px;
+        padding: 6px 4px;
+        font-size: 10px;
     }
 
     .leaderboard-table th:nth-child(6),
@@ -1572,34 +1619,58 @@ body, html {
 
     /* Toast Notification on Mobile */
     #notification-toast {
-        top: 50px;
+        top: 40px;
         width: 90vw;
         max-width: 90vw;
-        font-size: 12px;
-        padding: 10px 14px;
+        font-size: 11px;
+        padding: 8px 10px;
         text-align: center;
         box-sizing: border-box;
     }
 }
 
-/* Extra small devices (< 400px) */
-@media (max-width: 400px) {
+/* Landscape Mode on Mobile */
+@media (max-width: 900px) and (orientation: landscape) {
+    #control-dock {
+        height: auto;
+        min-height: 48px;
+        padding: 3px 8px calc(3px + env(safe-area-inset-bottom, 0px)) 8px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .camera-nav-group {
+        display: flex;
+        flex: 1;
+        gap: 4px;
+    }
+
     .cam-btn {
+        min-height: 32px;
+        padding: 3px 8px;
         font-size: 10px;
-        padding: 6px 1px;
+        flex: 1;
     }
 
     .btn-report-main {
-        font-size: 12px;
-        padding: 8px 6px;
+        min-height: 32px;
+        padding: 4px 12px;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+
+    .utility-group {
+        display: flex;
+        gap: 4px;
     }
 
     .util-btn {
-        padding: 8px 6px;
+        min-height: 32px;
+        padding: 3px 8px;
         font-size: 10px;
-    }
-
-    .title-main {
-        font-size: 19px;
+        white-space: nowrap;
     }
 }
