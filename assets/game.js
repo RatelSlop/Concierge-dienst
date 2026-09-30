@@ -359,7 +359,7 @@ class SchoolSurveillanceGame {
         }
     }
 
-    scheduleNextAnomaly() {
+    scheduleNextAnomaly(faster = false) {
         if (!this.isRunning || !this.anomaliesStarted) return;
 
         // If already at max anomalies (3), pause spawns until player resolves one
@@ -367,27 +367,32 @@ class SchoolSurveillanceGame {
             return;
         }
 
-        // Base spawn intervals - comfortable pacing
-        let baseDelay = 22; // seconds
-        if (this.settings.difficulty === 'easy') baseDelay = 32;
-        if (this.settings.difficulty === 'hard') baseDelay = 14;
+        // Base spawn intervals - more active pacing
+        let baseDelay = 13; // seconds (down from 22s)
+        if (this.settings.difficulty === 'easy') baseDelay = 19;
+        if (this.settings.difficulty === 'hard') baseDelay = 8;
 
-        // If 2 anomalies are already active, add extra breathing room!
+        // If 2 anomalies are already active, add moderate buffer
         if (this.activeAnomalies.length >= 2) {
-            baseDelay += 12;
+            baseDelay += 4;
         }
 
-        // Later in the night (03:00+), slightly increase frequency (up to 25% faster)
-        const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
-        const speedMultiplier = 1.0 - (nightProgress * 0.25);
+        // If triggered after clearing an anomaly, schedule the next one quickly
+        if (faster) {
+            baseDelay = Math.min(baseDelay, 7);
+        }
 
-        const delay = (baseDelay * speedMultiplier + (Math.random() * 4 - 2)) * 1000;
+        // Later in the night (03:00+), increase frequency (up to 30% faster)
+        const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
+        const speedMultiplier = 1.0 - (nightProgress * 0.30);
+
+        const delay = (baseDelay * speedMultiplier + (Math.random() * 3 - 1.5)) * 1000;
 
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
         this.spawnTimeout = setTimeout(() => {
             this.spawnRandomAnomaly();
             this.scheduleNextAnomaly();
-        }, Math.max(8000, delay));
+        }, Math.max(5000, delay));
     }
 
     preloadAllImages() {
@@ -727,6 +732,9 @@ class SchoolSurveillanceGame {
 
             this.updateThreatLevelDisplay();
             this.toggleReportTablet(false);
+
+            // Keep the action moving: schedule next anomaly promptly
+            this.scheduleNextAnomaly(true);
         } else {
             // FAILED / FALSE REPORT
             this.stats.reportsFailed++;
