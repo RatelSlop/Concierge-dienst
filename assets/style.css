@@ -137,25 +137,83 @@ body, html {
     pointer-events: none;
     opacity: 0;
     z-index: 25;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.2s ease;
 }
 
+/* Authentic Fluorescent Light Failure (voltage dip, dimming, warm/dull pulses, NO digital static) */
 .anomaly-flicker {
-    animation: light-flicker-anim 0.12s infinite;
-    background: rgba(0, 0, 0, 0.85);
-}
-
-@keyframes light-flicker-anim {
-    0% { opacity: 0.1; }
-    20% { opacity: 0.8; }
-    40% { opacity: 0.2; }
-    60% { opacity: 0.95; }
-    80% { opacity: 0.05; }
-    100% { opacity: 0.7; }
-}
-
-.anomaly-blackout {
+    animation: lamp-voltage-flicker 2.4s infinite ease-in-out;
+    background: radial-gradient(circle at 50% 30%, rgba(255, 235, 170, 0.12), rgba(8, 12, 16, 0.78));
     opacity: 1 !important;
+}
+
+@keyframes lamp-voltage-flicker {
+    0%, 100% { opacity: 0.15; filter: brightness(1.0); }
+    14% { opacity: 0.72; filter: brightness(0.45); }
+    18% { opacity: 0.25; filter: brightness(0.95); }
+    22% { opacity: 0.85; filter: brightness(0.35); }
+    26% { opacity: 0.2; filter: brightness(1.05); }
+    55% { opacity: 0.65; filter: brightness(0.5); }
+    60% { opacity: 0.3; filter: brightness(0.9); }
+    74% { opacity: 0.88; filter: brightness(0.3); }
+    78% { opacity: 0.2; filter: brightness(1.0); }
+}
+
+/* Blackout: Plunge the room into darkness while keeping CCTV OSD crisp */
+.anomaly-blackout {
+    opacity: 0.94 !important;
+    background: radial-gradient(circle at 50% 50%, rgba(3, 6, 8, 0.92), rgba(1, 2, 3, 0.99)) !important;
+}
+
+/* Camera Malfunction: VHS tracking jitter, horizontal sync skew, digital video error */
+.anomaly-camera-active {
+    animation: cctv-vhs-glitch 0.28s steps(2) infinite;
+    filter: contrast(1.5) saturate(0.2) !important;
+}
+
+@keyframes cctv-vhs-glitch {
+    0% { transform: translate(0, 0) skewX(0deg); }
+    25% { transform: translate(-7px, 1px) skewX(2.5deg); }
+    50% { transform: translate(6px, -1px) skewX(-2deg); }
+    75% { transform: translate(-3px, 1px) skewX(1deg); }
+    100% { transform: translate(0, 0) skewX(0deg); }
+}
+
+/* Rolling sync bar during camera failure */
+.camera-sync-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 22px;
+    background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.5), transparent);
+    box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+    z-index: 28;
+    animation: rolling-sync 2.6s linear infinite;
+}
+
+@keyframes rolling-sync {
+    0% { top: -30px; }
+    100% { top: 100%; }
+}
+
+.osd-cam-error {
+    display: inline-block;
+    background: rgba(220, 20, 20, 0.85);
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-left: 10px;
+    letter-spacing: 1px;
+    animation: blink-error 0.6s infinite alternate;
+}
+
+@keyframes blink-error {
+    0% { opacity: 0.4; }
+    100% { opacity: 1; }
 }
 
 /* Noise & Static Glitch Canvas */
@@ -1029,4 +1087,134 @@ body, html {
 .btn-replay:hover {
     background: #214732;
     box-shadow: 0 0 20px rgba(51, 255, 102, 0.5);
+}
+
+/* --- LEADERBOARD & SCORE ENTRY --- */
+.name-entry-card {
+    background: rgba(12, 24, 18, 0.95);
+    border: 1px solid var(--cctv-green);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 15px 0 20px;
+    min-width: 320px;
+    max-width: 480px;
+    box-shadow: 0 0 15px rgba(51, 255, 102, 0.2);
+}
+
+.cctv-input {
+    background: #060b08;
+    border: 1px solid #234c32;
+    color: #fff;
+    font-family: var(--font-cctv);
+    font-size: 14px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.cctv-input:focus {
+    border-color: var(--cctv-green);
+    box-shadow: 0 0 8px rgba(51, 255, 102, 0.4);
+}
+
+.btn-save-score {
+    background: linear-gradient(180deg, #1b733b, #0e4c25);
+    border: 1px solid var(--cctv-green);
+    color: #fff;
+    font-family: var(--font-cctv);
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 10px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-save-score:hover {
+    background: #228f49;
+    box-shadow: 0 0 12px rgba(51, 255, 102, 0.5);
+}
+
+.btn-save-score:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Leaderboard Modal Table */
+.leaderboard-container {
+    max-height: 380px;
+    overflow-y: auto;
+    margin: 15px 0;
+    border: 1px solid #1c3826;
+    border-radius: 6px;
+    background: #050a07;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.leaderboard-table th {
+    background: #0d1e14;
+    color: var(--cctv-amber);
+    padding: 10px 12px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #1c3826;
+    position: sticky;
+    top: 0;
+}
+
+.leaderboard-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #102418;
+    color: #cad8d0;
+}
+
+.leaderboard-table tr:hover {
+    background: #0b1a11;
+}
+
+.leaderboard-table tr.highlight-run {
+    background: rgba(51, 255, 102, 0.15) !important;
+    border-left: 3px solid var(--cctv-green);
+}
+
+.rank-gold {
+    color: #ffd700;
+    font-weight: bold;
+}
+
+.rank-silver {
+    color: #c0c0c0;
+    font-weight: bold;
+}
+
+.rank-bronze {
+    color: #cd7f32;
+    font-weight: bold;
+}
+
+.badge-survived {
+    background: rgba(51, 255, 102, 0.15);
+    color: var(--cctv-green);
+    border: 1px solid var(--cctv-green);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.badge-failed {
+    background: rgba(255, 77, 77, 0.15);
+    color: #ff8080;
+    border: 1px solid #ff4d4d;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
 }

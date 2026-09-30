@@ -153,16 +153,16 @@ const CAMERAS_CONFIG = [
     {
         id: 'cam3',
         number: 'CAM 03',
-        name: 'Bakstenen Gang',
+        name: 'Gang B011',
         code: 'VLG-B-03',
-        fullTitle: 'CAM 03 // HISTORISCHE GANG VLEUGEL B',
+        fullTitle: 'CAM 03 // GANG B011',
         src: 'assets/cameras/cam3_hallway.jpg',
         anomalies: [
             {
                 id: 'cam3_teacher_real',
                 type: 'teacher',
                 name: 'Docent om de bakstenen muur',
-                description: 'Een docent gluurt om de bakstenen muur links in de gang!',
+                description: 'Een docent gluurt om de bakstenen muur links in gang B011!',
                 targetRoom: 'cam3',
                 targetCategory: 'teacher',
                 renderData: {
@@ -174,7 +174,7 @@ const CAMERAS_CONFIG = [
                 id: 'cam3_door_opened',
                 type: 'displacement',
                 name: 'Lokaaldeur staat open',
-                description: 'De witte kantoordeur aan de rechterkant staat plotseling wagenwijd open in de gang!',
+                description: 'De witte kantoordeur aan de rechterkant staat plotseling wagenwijd open in gang B011!',
                 targetRoom: 'cam3',
                 targetCategory: 'displacement',
                 renderData: {
@@ -208,8 +208,8 @@ const CAMERAS_CONFIG = [
             {
                 id: 'cam3_blackout',
                 type: 'light',
-                name: 'Totale blackout bakstenen gang',
-                description: 'Alle verlichting in gang B valt uit, enkel het noodalarm gloeit.',
+                name: 'Totale blackout gang B011',
+                description: 'Alle verlichting in gang B011 valt uit, enkel het noodalarm gloeit.',
                 targetRoom: 'cam3',
                 targetCategory: 'light',
                 renderData: {
@@ -220,7 +220,7 @@ const CAMERAS_CONFIG = [
             {
                 id: 'cam3_camera_noise',
                 type: 'camera',
-                name: 'Cameraruis bakstenen gang',
+                name: 'Cameraruis gang B011',
                 description: 'Signaalinterferentie op CAM 03.',
                 targetRoom: 'cam3',
                 targetCategory: 'camera',
@@ -233,16 +233,16 @@ const CAMERAS_CONFIG = [
     {
         id: 'cam4',
         number: 'CAM 04',
-        name: 'Centrale Trap',
+        name: 'Trap en receptie',
         code: 'AUL-TR-04',
-        fullTitle: 'CAM 04 // CENTRALE TRAP & GLAS-IN-LOOD',
+        fullTitle: 'CAM 04 // TRAP EN RECEPTIE',
         src: 'assets/cameras/cam4_stairs.jpg',
         anomalies: [
             {
                 id: 'cam4_teacher_window',
                 type: 'teacher',
                 name: 'Docent in de bovenkamer',
-                description: 'Een docent staat voor het raam van de bovenverdieping naar de aula te kijken!',
+                description: 'Een docent staat voor het raam van de bovenverdieping naar de hal te kijken!',
                 targetRoom: 'cam4',
                 targetCategory: 'teacher',
                 renderData: {
@@ -277,8 +277,8 @@ const CAMERAS_CONFIG = [
             {
                 id: 'cam4_light_flicker',
                 type: 'light',
-                name: 'Knipperende aula-spotlights',
-                description: 'De verlichting rond de centrale trap knippert onheilspellend.',
+                name: 'Knipperende verlichting trap en receptie',
+                description: 'De verlichting rond de trap en receptie knippert onheilspellend.',
                 targetRoom: 'cam4',
                 targetCategory: 'light',
                 renderData: {
@@ -288,8 +288,8 @@ const CAMERAS_CONFIG = [
             {
                 id: 'cam4_blackout',
                 type: 'light',
-                name: 'Duisternis bij de trap',
-                description: 'De centrale hal is donker, enkel het glas-in-lood weerkaatst spookachtig.',
+                name: 'Duisternis bij trap en receptie',
+                description: 'De trap en receptie zijn gehuld in het donker, enkel het glas-in-lood weerkaatst spookachtig.',
                 targetRoom: 'cam4',
                 targetCategory: 'light',
                 renderData: {
@@ -300,7 +300,7 @@ const CAMERAS_CONFIG = [
             {
                 id: 'cam4_camera_noise',
                 type: 'camera',
-                name: 'Interferentie aula camera',
+                name: 'Interferentie camera trap en receptie',
                 description: 'Zware synchronisatiefout op CAM 04.',
                 targetRoom: 'cam4',
                 targetCategory: 'camera',

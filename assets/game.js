@@ -12,7 +12,7 @@ class SchoolSurveillanceGame {
             nightDurationSeconds: 360, // 6 minutes real time = 6 hours in-game
             difficulty: 'normal',       // easy (slow spawns), normal, hard (fast spawns)
             filterMode: 'cctv',         // cctv, nightvision, bw, raw
-            maxAnomalies: 4
+            maxAnomalies: 3             // Strict cap: max 3 anomalies simultaneously!
         };
 
         // Game State
@@ -60,7 +60,7 @@ class SchoolSurveillanceGame {
         this.initNoiseCanvas();
         this.renderCameraButtons();
         this.renderReportOptions();
-        this.renderTeacherManagerModal();
+        this.renderLeaderboard();
         this.applyFilterMode(this.settings.filterMode);
         this.preloadAllImages();
         this.showCamera(0);
@@ -108,12 +108,24 @@ class SchoolSurveillanceGame {
             btnRestartGameOver: document.getElementById('btn-restart-gameover'),
             btnRestartVictory: document.getElementById('btn-restart-victory'),
             
+            // Leaderboard & Settings Modals
+            leaderboardModal: document.getElementById('leaderboard-modal'),
+            btnOpenLeaderboard: document.getElementById('btn-open-leaderboard'),
+            btnCloseLeaderboard: document.getElementById('btn-close-leaderboard'),
+            btnClearLeaderboard: document.getElementById('btn-clear-leaderboard'),
+            leaderboardTbody: document.getElementById('leaderboard-tbody'),
+            
+            // Score entry elements
+            gameoverPlayerName: document.getElementById('gameover-player-name'),
+            btnSaveGameoverScore: document.getElementById('btn-save-gameover-score'),
+            gameoverSaveStatus: document.getElementById('gameover-save-status'),
+            victoryPlayerName: document.getElementById('victory-player-name'),
+            btnSaveVictoryScore: document.getElementById('btn-save-victory-score'),
+            victorySaveStatus: document.getElementById('victory-save-status'),
+            
             settingsModal: document.getElementById('settings-modal'),
-            teacherModal: document.getElementById('teacher-manager-modal'),
             btnOpenSettings: document.getElementById('btn-open-settings'),
-            btnOpenTeachers: document.getElementById('btn-open-teachers'),
             btnCloseSettings: document.getElementById('btn-close-settings'),
-            btnCloseTeachers: document.getElementById('btn-close-teachers'),
             
             // Settings controls
             selDuration: document.getElementById('setting-duration'),
@@ -129,6 +141,30 @@ class SchoolSurveillanceGame {
         this.dom.btnRestartGameOver.addEventListener('click', () => this.startGame());
         this.dom.btnRestartVictory.addEventListener('click', () => this.startGame());
 
+        // Leaderboard Modals & Score Saving
+        this.dom.btnOpenLeaderboard.addEventListener('click', () => {
+            this.renderLeaderboard();
+            this.openModal(this.dom.leaderboardModal);
+        });
+        this.dom.btnCloseLeaderboard.addEventListener('click', () => this.closeModal(this.dom.leaderboardModal));
+        this.dom.btnClearLeaderboard.addEventListener('click', () => this.clearLeaderboard());
+
+        this.dom.btnSaveGameoverScore.addEventListener('click', () => {
+            const name = this.dom.gameoverPlayerName.value.trim() || 'Conciërge';
+            this.saveRunScore(name, false);
+            this.dom.btnSaveGameoverScore.disabled = true;
+            this.dom.gameoverSaveStatus.textContent = '✅ Score succesvol opgeslagen op het bord!';
+            this.dom.gameoverSaveStatus.style.color = 'var(--cctv-green)';
+        });
+
+        this.dom.btnSaveVictoryScore.addEventListener('click', () => {
+            const name = this.dom.victoryPlayerName.value.trim() || 'Meester Conciërge';
+            this.saveRunScore(name, true);
+            this.dom.btnSaveVictoryScore.disabled = true;
+            this.dom.victorySaveStatus.textContent = '🏆 Score vereeuwigd op de erelijst!';
+            this.dom.victorySaveStatus.style.color = 'var(--cctv-green)';
+        });
+
         // Report Tablet Controls
         this.dom.btnReportMain.addEventListener('click', () => this.toggleReportTablet());
         this.dom.btnCloseTablet.addEventListener('click', () => this.toggleReportTablet(false));
@@ -141,11 +177,9 @@ class SchoolSurveillanceGame {
         window.addEventListener('mouseup', () => this.handleMouseUp());
         this.dom.viewport.addEventListener('dblclick', () => this.resetPanZoom());
 
-        // Settings & Teacher Manager Modals
+        // Settings Modal
         this.dom.btnOpenSettings.addEventListener('click', () => this.openModal(this.dom.settingsModal));
         this.dom.btnCloseSettings.addEventListener('click', () => this.closeModal(this.dom.settingsModal));
-        this.dom.btnOpenTeachers.addEventListener('click', () => this.openModal(this.dom.teacherModal));
-        this.dom.btnCloseTeachers.addEventListener('click', () => this.closeModal(this.dom.teacherModal));
 
         // Settings updates
         this.dom.selDuration.addEventListener('change', (e) => {
@@ -208,6 +242,14 @@ class SchoolSurveillanceGame {
         this.overloadSecondsLeft = 15;
         if (this.overloadTimer) clearInterval(this.overloadTimer);
 
+        // Reset score form states
+        if (this.dom.gameoverPlayerName) this.dom.gameoverPlayerName.value = '';
+        if (this.dom.gameoverSaveStatus) this.dom.gameoverSaveStatus.textContent = '';
+        if (this.dom.btnSaveGameoverScore) this.dom.btnSaveGameoverScore.disabled = false;
+        if (this.dom.victoryPlayerName) this.dom.victoryPlayerName.value = '';
+        if (this.dom.victorySaveStatus) this.dom.victorySaveStatus.textContent = '';
+        if (this.dom.btnSaveVictoryScore) this.dom.btnSaveVictoryScore.disabled = false;
+
         this.resetPanZoom();
         this.showCamera(0);
         this.updateThreatLevelDisplay();
@@ -216,15 +258,19 @@ class SchoolSurveillanceGame {
         if (this.clockInterval) clearInterval(this.clockInterval);
         this.clockInterval = setInterval(() => this.tickClock(), 1000);
 
-        // Schedule first anomaly spawn quickly (3.5 seconds)
+        // Rustfase from 00:00 to 00:45 AM: No anomalies!
+        this.showToast('DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERAS (GEEN AFWIJKINGEN TOT 00:45)');
+
+        // Schedule first anomaly spawn at exactly 00:45 AM
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
+        const timeUntil0045 = (45 / 360) * this.settings.nightDurationSeconds;
         this.spawnTimeout = setTimeout(() => {
             if (this.isRunning) {
+                this.showToast('⚠️ 00:45 AM // NACHTDIENST INTENSIVERING: EERSTE AFWIJKINGEN GEDETECTEERD!');
                 this.spawnRandomAnomaly();
                 this.scheduleNextAnomaly();
             }
-        }, 3500);
-        this.showToast('DIENST GESTART - 00:00 AM // HOUD DE CAMERAS IN DE GATEN');
+        }, timeUntil0045 * 1000);
     }
 
     tickClock() {
@@ -250,16 +296,20 @@ class SchoolSurveillanceGame {
         // Anomaly overload logic
         if (this.activeAnomalies.length >= this.settings.maxAnomalies) {
             this.overloadSecondsLeft -= 1;
+            this.updateThreatLevelDisplay(); // Live countdown on badge!
             if (this.overloadSecondsLeft <= 0) {
                 this.triggerGameOver('OVERVALT DOOR ANOMALIEËN // MAXIMALE CAPACITEIT OVERSCHREDEN');
             }
         } else {
-            this.overloadSecondsLeft = 15;
+            if (this.overloadSecondsLeft !== 15) {
+                this.overloadSecondsLeft = 15;
+                this.updateThreatLevelDisplay();
+            }
         }
 
-        // Periodic light flicker crackle if light anomaly active
+        // Periodic ambient crackle if light flicker anomaly active on current room
         const hasLightFlicker = this.activeAnomalies.some(a => a.type === 'light' && a.renderData.kind === 'flicker' && a.room === this.cameras[this.currentCamIndex].id);
-        if (hasLightFlicker && Math.random() < 0.3) {
+        if (hasLightFlicker && Math.random() < 0.25) {
             this.audio.playLightFlicker();
         }
     }
@@ -267,22 +317,36 @@ class SchoolSurveillanceGame {
     scheduleNextAnomaly() {
         if (!this.isRunning) return;
 
-        // Base spawn intervals - fast and tense!
-        let baseDelay = 10; // seconds (fast and active)
-        if (this.settings.difficulty === 'easy') baseDelay = 16;
-        if (this.settings.difficulty === 'hard') baseDelay = 6;
+        // If before 00:45 AM, do NOT schedule spawns yet
+        const threshold0045 = (45 / 360) * this.settings.nightDurationSeconds;
+        if (this.gameTimeSeconds < threshold0045) return;
 
-        // Later in the night (03:00+), anomalies spawn 35% faster
+        // If already at max anomalies (3), pause spawns until player resolves one
+        if (this.activeAnomalies.length >= this.settings.maxAnomalies) {
+            return;
+        }
+
+        // Base spawn intervals - comfortable pacing so player is not overwhelmed!
+        let baseDelay = 28; // seconds
+        if (this.settings.difficulty === 'easy') baseDelay = 38;
+        if (this.settings.difficulty === 'hard') baseDelay = 18;
+
+        // If 2 anomalies are already active, add extra breathing room!
+        if (this.activeAnomalies.length >= 2) {
+            baseDelay += 15;
+        }
+
+        // Later in the night (03:00+), slightly increase frequency (up to 25% faster)
         const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
-        const speedMultiplier = 1.0 - (nightProgress * 0.35);
+        const speedMultiplier = 1.0 - (nightProgress * 0.25);
 
-        const delay = (baseDelay * speedMultiplier + (Math.random() * 4 - 2)) * 1000;
+        const delay = (baseDelay * speedMultiplier + (Math.random() * 6 - 3)) * 1000;
 
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
         this.spawnTimeout = setTimeout(() => {
             this.spawnRandomAnomaly();
             this.scheduleNextAnomaly();
-        }, Math.max(4000, delay));
+        }, Math.max(12000, delay));
     }
 
     preloadAllImages() {
@@ -301,24 +365,26 @@ class SchoolSurveillanceGame {
     }
 
     spawnRandomAnomaly() {
-        if (!this.isRunning || this.activeAnomalies.length >= this.settings.maxAnomalies + 2) return;
+        if (!this.isRunning) return;
 
-        // Collect all possible anomalies that can validly spawn
+        // Strictly check 00:45 AM threshold
+        const threshold0045 = (45 / 360) * this.settings.nightDurationSeconds;
+        if (this.gameTimeSeconds < threshold0045) return;
+
+        // Strict limit: NEVER exceed maxAnomalies (3)
+        if (this.activeAnomalies.length >= this.settings.maxAnomalies) return;
+
+        // Strict Camera Rule: A camera can ONLY have 1 active anomaly at a time!
+        const roomsWithActiveAnomaly = new Set(this.activeAnomalies.map(a => a.room));
         const available = [];
+
         this.cameras.forEach(cam => {
-            // Check if this camera ALREADY has an active swap_image anomaly!
-            const cameraHasSwapActive = this.activeAnomalies.some(a => a.room === cam.id && a.renderData && a.renderData.kind === 'swap_image');
+            // If this room already has an active anomaly, SKIP IT completely!
+            if (roomsWithActiveAnomaly.has(cam.id)) return;
 
             cam.anomalies.forEach(anomaly => {
                 const isActive = this.activeAnomalies.some(a => a.configId === anomaly.id);
                 if (isActive) return;
-
-                // CRITICAL FIX: Do NOT spawn a second swap_image anomaly in a room that already has one!
-                // Because only one image can be displayed at a time, a second swap anomaly would be invisible!
-                if (anomaly.renderData && anomaly.renderData.kind === 'swap_image' && cameraHasSwapActive) {
-                    return;
-                }
-
                 available.push({ ...anomaly, cameraObj: cam });
             });
         });
@@ -332,19 +398,19 @@ class SchoolSurveillanceGame {
             pool = preloadedAnomalies;
         }
 
-        // VARIETY ROTATION: prioritize anomalies that haven't spawned recently so player sees all of them!
+        // VARIETY ROTATION: prioritize anomalies that haven't spawned recently
         if (!this.spawnHistory) this.spawnHistory = [];
         const unseenOrOlder = pool.filter(a => !this.spawnHistory.slice(-5).includes(a.id));
         if (unseenOrOlder.length > 0) {
             pool = unseenOrOlder;
         }
 
-        // 75% bias towards rooms player is NOT currently viewing (classic Observation Duty style)
+        // Bias towards rooms player is NOT currently viewing (70%)
         const currentCamId = this.cameras[this.currentCamIndex].id;
         const otherRooms = pool.filter(a => a.targetRoom !== currentCamId);
         
         let chosen;
-        if (otherRooms.length > 0 && Math.random() < 0.75) {
+        if (otherRooms.length > 0 && Math.random() < 0.70) {
             chosen = otherRooms[Math.floor(Math.random() * otherRooms.length)];
         } else {
             chosen = pool[Math.floor(Math.random() * pool.length)];
@@ -366,9 +432,8 @@ class SchoolSurveillanceGame {
             spawnTime: this.gameTimeSeconds
         };
 
-        // If teacher anomaly, assign a specific teacher sprite
         if (instance.type === 'teacher') {
-            instance.teacherData = this.teacherMgr.getRandomTeacher();
+            instance.teacherData = this.teacherMgr ? this.teacherMgr.getRandomTeacher() : null;
         }
 
         this.activeAnomalies.push(instance);
@@ -419,13 +484,21 @@ class SchoolSurveillanceGame {
         const cam = this.cameras[this.currentCamIndex];
         const anomaliesInThisRoom = this.activeAnomalies.filter(a => a.room === cam.id);
 
-        // Clear previous overlays
+        // Clear previous overlays & anomaly effects
         this.dom.anomalyLayer.innerHTML = '';
         this.dom.lightOverlay.className = '';
         this.dom.lightOverlay.style.background = '';
         this.dom.lightOverlay.style.opacity = '0';
+        this.dom.feedContainer.classList.remove('anomaly-camera-active');
+        this.dom.noiseCanvas.style.opacity = '0.14';
 
-        // Check if there is an image swap anomaly active (such as the real teacher photos!)
+        const existingSyncBar = this.dom.viewport.querySelector('.camera-sync-bar');
+        if (existingSyncBar) existingSyncBar.remove();
+
+        const existingOsdErr = document.getElementById('cam-osd-err');
+        if (existingOsdErr) existingOsdErr.remove();
+
+        // Check if there is an image swap anomaly active
         const swapAnomaly = anomaliesInThisRoom.find(a => a.renderData && a.renderData.kind === 'swap_image');
         if (swapAnomaly) {
             this.dom.baseImg.src = swapAnomaly.renderData.imageSrc;
@@ -434,12 +507,12 @@ class SchoolSurveillanceGame {
         }
 
         anomaliesInThisRoom.forEach(anomaly => {
-            // If swap_image, base image is already showing the teacher
+            // If swap_image, base image is already showing the anomaly
             if (anomaly.renderData && anomaly.renderData.kind === 'swap_image') {
                 return;
             }
 
-            // 1. Teacher Anomaly (cutout/sprite)
+            // 1. Teacher Anomaly (cutout/sprite fallback)
             if (anomaly.type === 'teacher') {
                 const img = document.createElement('img');
                 img.className = 'teacher-anomaly-sprite';
@@ -468,20 +541,37 @@ class SchoolSurveillanceGame {
                 }
             }
 
-            // 3. Light Anomaly (Flicker / Blackout)
+            // 3. Light Anomaly (Fluorescent flicker or Blackout: authentic room voltage dips)
             else if (anomaly.type === 'light') {
                 if (anomaly.renderData.kind === 'flicker') {
-                    this.dom.lightOverlay.classList.add('anomaly-flicker');
+                    this.dom.lightOverlay.className = 'anomaly-flicker';
                 } else if (anomaly.renderData.kind === 'blackout') {
-                    this.dom.lightOverlay.classList.add('anomaly-blackout');
-                    this.dom.lightOverlay.style.background = anomaly.renderData.tint || 'rgba(0,0,0,0.92)';
+                    this.dom.lightOverlay.className = 'anomaly-blackout';
+                    this.dom.lightOverlay.style.background = anomaly.renderData.tint || 'radial-gradient(circle, rgba(3,6,8,0.92), rgba(1,2,3,0.99))';
                 }
             }
 
-            // 4. Camera Noise Anomaly
+            // 4. Camera Anomaly (Persistent horizontal VHS tracking glitch, rolling sync bar, heavy noise)
             else if (anomaly.type === 'camera') {
-                // Increases static noise on canvas
-                this.triggerTemporaryGlitchBurst();
+                this.dom.feedContainer.classList.add('anomaly-camera-active');
+                this.dom.noiseCanvas.style.opacity = '0.45';
+
+                // Rolling sync bar
+                if (!this.dom.viewport.querySelector('.camera-sync-bar')) {
+                    const syncBar = document.createElement('div');
+                    syncBar.className = 'camera-sync-bar';
+                    this.dom.viewport.appendChild(syncBar);
+                }
+
+                // OSD error indicator
+                if (!document.getElementById('cam-osd-err')) {
+                    const osdErr = document.createElement('span');
+                    osdErr.id = 'cam-osd-err';
+                    osdErr.className = 'osd-cam-error';
+                    osdErr.textContent = '⚠️ SIGNAALFOUT';
+                    const topRow = document.querySelector('.osd-top-row');
+                    if (topRow) topRow.appendChild(osdErr);
+                }
             }
         });
     }
@@ -515,9 +605,6 @@ class SchoolSurveillanceGame {
         } else if (count === 2) {
             badge.classList.add('threat-warning');
             badge.textContent = `WAARSCHUWING (${count}/${max})`;
-        } else if (count >= 3 && count < max) {
-            badge.classList.add('threat-danger');
-            badge.textContent = `KRITIEK (${count}/${max})`;
         } else {
             badge.classList.add('threat-danger');
             badge.textContent = `ALARM OVERLOAD! (${count}/${max}) [${this.overloadSecondsLeft}s]`;
@@ -788,55 +875,104 @@ class SchoolSurveillanceGame {
         });
     }
 
-    renderTeacherManagerModal() {
-        const grid = document.getElementById('teacher-cards-grid');
-        if (!grid) return;
-        grid.innerHTML = '';
+    // Leaderboard System
+    loadLeaderboard() {
+        const stored = localStorage.getItem('concierge_leaderboard_v1');
+        if (stored) {
+            try { return JSON.parse(stored); } catch(e) {}
+        }
+        return [
+            { name: 'Hoofdconciërge Bert', timeSurvived: '06:00 AM (OVERLEEFD)', survivedSeconds: 360, reportsSuccess: 9, accuracy: 100, date: 'Vast rooster', victory: true },
+            { name: 'Conciërge Theo', timeSurvived: '05:18 AM', survivedSeconds: 318, reportsSuccess: 7, accuracy: 88, date: 'Ochtendploeg', victory: false },
+            { name: 'Stagiair Rick', timeSurvived: '03:42 AM', survivedSeconds: 222, reportsSuccess: 4, accuracy: 75, date: 'Nachtdienst', victory: false },
+            { name: 'Avondconciërge Jan', timeSurvived: '02:15 AM', survivedSeconds: 135, reportsSuccess: 2, accuracy: 50, date: 'Vrijdagavond', victory: false }
+        ];
+    }
 
-        const allTeachers = this.teacherMgr.getAllTeachers();
-        allTeachers.forEach(t => {
-            const card = document.createElement('div');
-            card.className = 'teacher-card';
-            card.innerHTML = `
-                ${!t.isDefault ? `<button class="teacher-delete-btn" title="Verwijder docent">✕</button>` : ''}
-                <img class="teacher-preview-thumb" src="${t.src}" alt="${t.name}">
-                <div class="teacher-card-name">${t.name}</div>
-            `;
+    saveRunScore(playerName, isVictory) {
+        const list = this.loadLeaderboard();
+        const total = Math.max(1, this.stats.reportsTotal);
+        const acc = Math.round((this.stats.reportsSuccess / total) * 100);
+        const clockStr = this.dom.clockTime.textContent;
+        const timeLabel = isVictory ? '06:00 AM (OVERLEEFD)' : clockStr;
+        const now = new Date();
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth()+1).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-            if (!t.isDefault) {
-                const delBtn = card.querySelector('.teacher-delete-btn');
-                delBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.teacherMgr.removeCustomTeacher(t.id);
-                    this.renderTeacherManagerModal();
-                    this.showToast('Docent verwijderd.');
-                });
-            }
+        const entry = {
+            id: 'run_' + Date.now(),
+            name: playerName,
+            timeSurvived: timeLabel,
+            survivedSeconds: this.gameTimeSeconds,
+            reportsSuccess: this.stats.reportsSuccess,
+            accuracy: isVictory && this.stats.reportsTotal === 0 ? 100 : acc,
+            date: dateStr,
+            victory: isVictory
+        };
 
-            grid.appendChild(card);
+        list.push(entry);
+        // Sort: victory runs first, then survivedSeconds desc, then accuracy desc
+        list.sort((a, b) => {
+            if (a.victory !== b.victory) return b.victory ? 1 : -1;
+            if (b.survivedSeconds !== a.survivedSeconds) return b.survivedSeconds - a.survivedSeconds;
+            return b.accuracy - a.accuracy;
         });
 
-        // Upload handler
-        const fileInput = document.getElementById('teacher-file-input');
-        const dropzone = document.getElementById('teacher-dropzone');
-        const nameInput = document.getElementById('teacher-name-input');
+        // Save top 20
+        const topList = list.slice(0, 20);
+        localStorage.setItem('concierge_leaderboard_v1', JSON.stringify(topList));
 
-        dropzone.onclick = () => fileInput.click();
+        this.renderLeaderboard(entry.id);
+        this.openModal(this.dom.leaderboardModal);
+    }
 
-        fileInput.onchange = (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+    renderLeaderboard(highlightId = null) {
+        const list = this.loadLeaderboard();
+        const tbody = this.dom.leaderboardTbody;
+        if (!tbody) return;
+        tbody.innerHTML = '';
 
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-                const name = nameInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
-                await this.teacherMgr.addCustomTeacher(name, ev.target.result);
-                nameInput.value = '';
-                this.renderTeacherManagerModal();
-                this.showToast(`✅ Preloaded anomalie '${name}' toegevoegd!`);
-            };
-            reader.readAsDataURL(file);
-        };
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #777; padding: 20px;">Nog geen conciërge runs geregistreerd.</td></tr>`;
+            return;
+        }
+
+        const escapeHTML = (str) => String(str).replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[m]);
+
+        list.forEach((entry, idx) => {
+            const tr = document.createElement('tr');
+            if (entry.id && entry.id === highlightId) {
+                tr.className = 'highlight-run';
+            }
+
+            let rankBadge = `${idx + 1}`;
+            if (idx === 0) rankBadge = `<span class="rank-gold">🥇 1</span>`;
+            else if (idx === 1) rankBadge = `<span class="rank-silver">🥈 2</span>`;
+            else if (idx === 2) rankBadge = `<span class="rank-bronze">🥉 3</span>`;
+
+            const statusBadge = entry.victory 
+                ? `<span class="badge-survived">06:00 OVERLEEFD</span>`
+                : `<span class="badge-failed">${entry.timeSurvived}</span>`;
+
+            tr.innerHTML = `
+                <td>${rankBadge}</td>
+                <td><strong>${escapeHTML(entry.name)}</strong></td>
+                <td>${statusBadge}</td>
+                <td style="color: var(--cctv-green);">${entry.reportsSuccess} opgelost</td>
+                <td>${entry.accuracy}%</td>
+                <td style="font-size: 11px; opacity: 0.7;">${entry.date}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    clearLeaderboard() {
+        if (confirm('Weet je zeker dat je het conciërge leaderboard wilt wissen?')) {
+            localStorage.removeItem('concierge_leaderboard_v1');
+            this.renderLeaderboard();
+            this.showToast('Scorebord gewist.');
+        }
     }
 
     openModal(modal) {

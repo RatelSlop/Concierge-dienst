@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=4.0">
 </head>
 <body>
 
@@ -60,7 +60,7 @@
                     </div>
                     <div class="osd-threat-box">
                         <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">DREIGINGSNIVEAU:</div>
-                        <div id="threat-badge" class="threat-badge threat-safe">VEILIG (0/4)</div>
+                        <div id="threat-badge" class="threat-badge threat-safe">VEILIG (0/3)</div>
                     </div>
                 </div>
             </div>
@@ -85,7 +85,7 @@
 
         <!-- Utility Buttons -->
         <div class="utility-group">
-            <button id="btn-open-teachers" class="util-btn" title="Beheer docentenfoto's">👨‍🏫 Docenten</button>
+            <button id="btn-open-leaderboard" class="util-btn" title="Bekijk Leaderboard">🏆 Leaderboard</button>
             <button id="btn-open-settings" class="util-btn" title="Instellingen en filters">⚙️ Opties</button>
         </div>
     </div>
@@ -136,11 +136,13 @@
                 <strong>INSTRUCTIES VOOR DE CONCIËRGE:</strong>
                 <ul>
                     <li>Je nachtdienst loopt van <strong>00:00 tot 06:00 uur</strong>.</li>
-                    <li>Schakel tussen de 4 camera's met de knoppen onderin of sneltoetsen <strong>[1], [2], [3], [4]</strong>.</li>
+                    <li>Tussen <strong>00:00 en 00:45</strong> is de rustfase: verken de 4 camera's en onthoud hoe alles eruit hoort te zien!</li>
+                    <li>Vanaf <strong>00:45 uur</strong> kunnen de eerste afwijkingen optreden.</li>
+                    <li>Schakel tussen de 4 camera's: CAM 01 (Kluisjeshal), CAM 02 (Fietsenstalling), CAM 03 (Gang B011), CAM 04 (Trap en receptie).</li>
                     <li>Gebruik je muiswiel om in te zoomen op verdachte plekken en sleep om rond te kijken!</li>
                     <li>Zie je iets vreemds? Druk op <strong>[SPATIE]</strong> of klik op <strong>MELD ANOMALIE</strong>.</li>
-                    <li>Kies de juiste ruimte en anomalie-categorie (bijv. <em>Docent</em>, <em>Lichtstoring</em>, <em>Extra Object</em>).</li>
-                    <li><strong>Let op:</strong> Docenten dwalen stilletjes door de gangen en gluren om hoeken! Laat niet te veel afwijkingen tegelijk ontstaan (maximaal 4), anders raakt het bewakingssysteem overbelast!</li>
+                    <li>Kies de juiste ruimte en categorie (<em>Docent</em>, <em>Missend Object</em>, <em>Lichtstoring</em>, <em>Camerastoring</em>).</li>
+                    <li><strong>Let op:</strong> Laat niet te veel afwijkingen tegelijk ontstaan (maximaal 3), anders raakt het systeem overbelast!</li>
                 </ul>
             </div>
 
@@ -159,6 +161,16 @@
             <div>Nauwkeurigheid: <strong id="stat-success-rate" style="color: var(--cctv-green);">75%</strong></div>
         </div>
 
+        <!-- Name entry for Leaderboard -->
+        <div class="name-entry-card" id="gameover-name-card">
+            <div style="font-size: 12px; color: var(--cctv-amber); margin-bottom: 8px;">VUL JE NAAM IN VOOR HET LEADERBOARD:</div>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+                <input type="text" id="gameover-player-name" maxlength="20" placeholder="Bijv. Conciërge Rick" class="cctv-input" style="flex: 1;">
+                <button id="btn-save-gameover-score" class="btn-save-score">SCORE OPSLAAN</button>
+            </div>
+            <div id="gameover-save-status" style="font-size: 11px; margin-top: 6px;"></div>
+        </div>
+
         <button id="btn-restart-gameover" class="btn-replay">OPNIEUW PROBEREN</button>
     </div>
 
@@ -174,33 +186,47 @@
             <div>Totaal aantal meldingen: <strong id="stat-vic-reports" style="color: #fff;">8</strong></div>
         </div>
 
+        <!-- Name entry for Leaderboard -->
+        <div class="name-entry-card" id="victory-name-card">
+            <div style="font-size: 12px; color: var(--cctv-green); margin-bottom: 8px;">🎉 GEFELICITEERD! VUL JE NAAM IN VOOR DE ERELIJST:</div>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+                <input type="text" id="victory-player-name" maxlength="20" placeholder="Bijv. Meester Conciërge Jan" class="cctv-input" style="flex: 1;">
+                <button id="btn-save-victory-score" class="btn-save-score">SCORE OPSLAAN</button>
+            </div>
+            <div id="victory-save-status" style="font-size: 11px; margin-top: 6px;"></div>
+        </div>
+
         <button id="btn-restart-victory" class="btn-replay">NIEUWE DIENST STARTEN</button>
     </div>
 
-    <!-- Preloaded Anomalies / Teacher Manager Modal -->
-    <div id="teacher-manager-modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2>📸 PRELOADED ANOMALIEËN & DOCENTEN</h2>
-            <p>Anomalieën in het spel werken via <strong>preloaded foto's</strong>. Zodra een anomalie optreedt, schakelt de camera naadloos over naar de foto met de afwijking. Wanneer je de melding indient, flitst de camera terug naar de standaardfoto!</p>
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 650px;">
+            <h2>🏆 ERELIJST CONCIËRGES // HIGH SCORES</h2>
+            <p style="font-size: 12px; opacity: 0.8;">De beste nachtdiensten en langst overleefde surveillance runs op Elzendaal College:</p>
 
-            <h3>📸 EIGEN PRELOADED ANOMALIE / DOCENT TOEVOEGEN</h3>
-            <div id="teacher-dropzone" class="teacher-upload-dropzone">
-                <div style="font-size: 28px; margin-bottom: 6px;">📁</div>
-                <div><strong>Klik hier of sleep een preloaded foto met een docent/afwijking</strong></div>
-                <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">Ondersteunt JPG en PNG genomen vanuit dezelfde camerapositie</div>
+            <div class="leaderboard-container">
+                <table class="leaderboard-table" id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 45px;">#</th>
+                            <th>CONCIËRGE</th>
+                            <th>TIJD OVERLEEFD</th>
+                            <th>OPGELOST</th>
+                            <th>PRECISIE</th>
+                            <th>DATUM</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-tbody">
+                        <!-- Populated dynamically via JS -->
+                    </tbody>
+                </table>
             </div>
-            <input type="file" id="teacher-file-input" accept="image/*" style="display: none;">
 
-            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
-                <input type="text" id="teacher-name-input" placeholder="Beschrijving van de afwijking / naam docent" style="flex: 1; padding: 8px 12px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                <button id="btn-clear-leaderboard" style="background: none; border: 1px solid #442222; color: #cc6666; font-family: var(--font-cctv); font-size: 11px; padding: 6px 12px; border-radius: 4px; cursor: pointer;">SCOREBORD LEGEN</button>
+                <button id="btn-close-leaderboard" class="btn-modal-close" style="margin-top: 0; float: none;">SLUITEN</button>
             </div>
-
-            <h3>ACTIEVE DOCENTEN IN DE NACHT:</h3>
-            <div class="teacher-grid" id="teacher-cards-grid">
-                <!-- Cards rendered dynamically -->
-            </div>
-
-            <button id="btn-close-teachers" class="btn-modal-close">SLUITEN</button>
         </div>
     </div>
 
@@ -253,10 +279,10 @@
 </div>
 
 <!-- Scripts -->
-<script src="assets/audio.js?v=3.0"></script>
-<script src="assets/teacher_manager.js?v=3.0"></script>
-<script src="assets/anomalies_config.js?v=3.0"></script>
-<script src="assets/game.js?v=3.0"></script>
+<script src="assets/audio.js?v=4.0"></script>
+<script src="assets/teacher_manager.js?v=4.0"></script>
+<script src="assets/anomalies_config.js?v=4.0"></script>
+<script src="assets/game.js?v=4.0"></script>
 
 </body>
 </html>

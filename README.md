@@ -41,12 +41,12 @@ In dit spel speel je als de **schoolconciërge op nachtdienst**. Tussen **00:00 
 2. **CAM 02: Fietsenstalling Exterieur (`EXT-FT-02`)**
    - *Missend Object Anomalie:* Alle honderden fietsen zijn plotseling spoorloos verdwenen! De stalling is helemaal leeg!
    - *Verplaatst / Omgeving:* **De witte containers rechtsachter zijn vervangen door extra rijen fietsenrekken!**
-3. **CAM 03: Historische Gang Vleugel B (`VLG-B-03`)**
-   - *Docent Anomalie:* De docent gluurt om de bakstenen muur links in de gang!
+3. **CAM 03: Gang B011 (`VLG-B-03`)**
+   - *Docent Anomalie:* De docent gluurt om de bakstenen muur links in gang B011!
    - *Verplaatst Object / Deur:* **De witte lokaaldeur rechts staat plotseling wagenwijd open!**
    - *Missend Object:* **De rode brandslanghaspel aan de rechter bakstenen muur is spoorloos verdwenen!**
-4. **CAM 04: Centrale Aula & Trap (`AUL-TR-04`)**
-   - *Docent Anomalie (Bovenkamer):* De docent staat boven in de kamer achter het raam naar de aula te kijken!
+4. **CAM 04: Trap en receptie (`AUL-TR-04`)**
+   - *Docent Anomalie (Bovenkamer):* De docent staat boven in de kamer achter het raam naar de hal te kijken!
    - *Docent Anomalie (Balustrade):* **Een docent staat bovenaan bij de witte balustrade over de reling naar beneden te staren!**
    - *Missend Object / Ramen:* **De drie grote glas-in-loodramen rechts zijn spoorloos verdwenen en dichtgemetseld!**
 
