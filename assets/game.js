@@ -33,6 +33,15 @@ class SchoolSurveillanceGame {
         this.dragStartX = 0;
         this.dragStartY = 0;
 
+        // Mobile Touch State (pinch zoom, swipe cameras, pan)
+        this.touchStartX = null;
+        this.touchStartY = null;
+        this.touchCurrentX = null;
+        this.touchCurrentY = null;
+        this.initialPinchDist = null;
+        this.initialZoom = 1.0;
+        this.lastTapTime = 0;
+
         // Reporting State
         this.selectedReportRoom = 'cam1';
         this.selectedReportCategory = 'teacher';
@@ -172,12 +181,18 @@ class SchoolSurveillanceGame {
         this.dom.btnCloseTablet.addEventListener('click', () => this.toggleReportTablet(false));
         this.dom.btnSendReport.addEventListener('click', () => this.submitReport());
 
-        // Pan and Zoom
-        this.dom.viewport.addEventListener('wheel', (e) => this.handleZoom(e));
+        // Pan and Zoom (Mouse)
+        this.dom.viewport.addEventListener('wheel', (e) => this.handleZoom(e), { passive: false });
         this.dom.viewport.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         window.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         window.addEventListener('mouseup', () => this.handleMouseUp());
         this.dom.viewport.addEventListener('dblclick', () => this.resetPanZoom());
+
+        // Touch Gestures for Mobile (Pinch zoom, drag pan, swipe camera switch, double tap reset)
+        this.dom.viewport.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+        this.dom.viewport.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+        this.dom.viewport.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
+        this.dom.viewport.addEventListener('touchcancel', () => this.handleTouchEnd());
 
         // Settings Modal
         this.dom.btnOpenSettings.addEventListener('click', () => this.openModal(this.dom.settingsModal));
@@ -770,6 +785,108 @@ class SchoolSurveillanceGame {
         this.panX = 0;
         this.panY = 0;
         this.applyPanZoom();
+    }
+
+    // Mobile Touch Gesture Handlers (Swipe camera, pinch-zoom, pan, double-tap reset)
+    handleTouchStart(e) {
+        if (!this.isRunning || this.isReporting) return;
+
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const now = Date.now();
+
+            // Double tap to quickly reset zoom & pan
+            if (now - this.lastTapTime < 320) {
+                this.resetPanZoom();
+                this.lastTapTime = 0;
+                if (e.cancelable) e.preventDefault();
+                return;
+            }
+            this.lastTapTime = now;
+
+            this.touchStartX = touch.clientX;
+            this.touchStartY = touch.clientY;
+            this.touchCurrentX = touch.clientX;
+            this.touchCurrentY = touch.clientY;
+
+            if (this.zoom > 1.0) {
+                this.isDragging = true;
+                this.dragStartX = touch.clientX - this.panX;
+                this.dragStartY = touch.clientY - this.panY;
+            }
+        } else if (e.touches.length === 2) {
+            // Multi-touch pinch zoom init
+            this.isDragging = false;
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            this.initialPinchDist = Math.hypot(dx, dy);
+            this.initialZoom = this.zoom;
+            if (e.cancelable) e.preventDefault();
+        }
+    }
+
+    handleTouchMove(e) {
+        if (!this.isRunning || this.isReporting) return;
+
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            this.touchCurrentX = touch.clientX;
+            this.touchCurrentY = touch.clientY;
+
+            if (this.zoom > 1.0 && this.isDragging) {
+                if (e.cancelable) e.preventDefault();
+                const maxPanX = (this.dom.viewport.clientWidth * (this.zoom - 1)) / 2;
+                const maxPanY = (this.dom.viewport.clientHeight * (this.zoom - 1)) / 2;
+                this.panX = Math.max(-maxPanX, Math.min(maxPanX, touch.clientX - this.dragStartX));
+                this.panY = Math.max(-maxPanY, Math.min(maxPanY, touch.clientY - this.dragStartY));
+                this.applyPanZoom();
+            } else if (this.zoom === 1.0 && this.touchStartX !== null) {
+                // If user is swiping horizontally on unzoomed camera, prevent browser navigation/scrolling
+                const dx = Math.abs(touch.clientX - this.touchStartX);
+                const dy = Math.abs(touch.clientY - this.touchStartY);
+                if (dx > 12 && dx > dy && e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+        } else if (e.touches.length === 2 && this.initialPinchDist) {
+            if (e.cancelable) e.preventDefault();
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const currentDist = Math.hypot(dx, dy);
+            if (this.initialPinchDist > 0) {
+                const factor = currentDist / this.initialPinchDist;
+                this.zoom = Math.max(1.0, Math.min(2.5, this.initialZoom * factor));
+                if (this.zoom === 1.0) {
+                    this.panX = 0;
+                    this.panY = 0;
+                }
+                this.applyPanZoom();
+            }
+        }
+    }
+
+    handleTouchEnd(e) {
+        if (this.zoom === 1.0 && this.touchStartX !== null && this.touchCurrentX !== null) {
+            const deltaX = this.touchCurrentX - this.touchStartX;
+            const deltaY = this.touchCurrentY - this.touchStartY;
+            // Horizontal swipe detection (> 40px, more horizontal than vertical)
+            if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+                if (deltaX < 0) {
+                    // Swipe left -> Next camera
+                    this.showCamera((this.currentCamIndex + 1) % this.cameras.length);
+                } else {
+                    // Swipe right -> Previous camera
+                    this.showCamera((this.currentCamIndex - 1 + this.cameras.length) % this.cameras.length);
+                }
+            }
+        }
+
+        this.isDragging = false;
+        this.touchStartX = null;
+        this.touchStartY = null;
+        this.touchCurrentX = null;
+        this.touchCurrentY = null;
+        this.initialPinchDist = null;
     }
 
     applyPanZoom() {
