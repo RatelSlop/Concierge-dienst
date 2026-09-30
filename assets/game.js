@@ -363,15 +363,32 @@ class SchoolSurveillanceGame {
         if (this.clockInterval) clearInterval(this.clockInterval);
         this.clockInterval = setInterval(() => this.tickClock(), 1000);
 
-        const rustThreshold = ((this.settings.rustMins !== undefined ? this.settings.rustMins : 45) / 360) * this.settings.nightDurationSeconds;
-        if (rustThreshold <= 0) {
-            // Instant action
+        if (this.isEndless) {
+            // Endless mode: action starts right away!
             this.anomaliesStarted = true;
-            this.showToast(this.isEndless ? '♾️ ENDLESS DIENST GESTART - OVERLEEF ZO LANG MOGELIJK!' : 'DIENST GESTART - 00:00 AM // HOUD DE CAMERA\'S IN DE GATEN!');
-            this.spawnRandomAnomaly();
-            this.scheduleNextAnomaly();
+            this.showToast('♾️ ENDLESS MODUS GESTART // ANOMALIEËN ZIJN ACTIEF!', 'warning');
+            setTimeout(() => {
+                if (this.isRunning) {
+                    this.spawnRandomAnomaly();
+                    this.scheduleNextAnomaly();
+                }
+            }, 2500);
         } else {
-            this.showToast(this.isEndless ? '♾️ ENDLESS MODUS GESTART // RUSTFASE TOT 00:45 AM' : `DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERA'S (START OM 00:45 AM)`);
+            const rustMinutes = this.settings.rustMins !== undefined ? this.settings.rustMins : 45;
+            const rustThreshold = (rustMinutes / 360) * this.settings.nightDurationSeconds;
+            if (rustThreshold <= 0) {
+                // Instant action
+                this.anomaliesStarted = true;
+                this.showToast('DIENST GESTART - 00:00 AM // HOUD DE CAMERA\'S IN DE GATEN!');
+                setTimeout(() => {
+                    if (this.isRunning) {
+                        this.spawnRandomAnomaly();
+                        this.scheduleNextAnomaly();
+                    }
+                }, 2500);
+            } else {
+                this.showToast(`DIENST GESTART - 00:00 AM // RUSTFASE TOT 00:45 AM (VERKEN DE CAMERA'S)`);
+            }
         }
     }
 
@@ -408,17 +425,17 @@ class SchoolSurveillanceGame {
             this.dom.shiftProgress.textContent = `♾️ ENDLESS SURVIVAL // ${totalSimHours}u ${pad(simMins)}m OVERLEEFD`;
         }
 
-        // Rustfase check: transition to active anomalies at 00:45 AM
-        const rustMinutes = this.settings.rustMins !== undefined ? this.settings.rustMins : 45;
-        const rustThresholdSeconds = (rustMinutes / 360) * this.settings.nightDurationSeconds;
+        // Rustfase check: transition to active anomalies at 00:45 AM (only in standard mode)
+        if (!this.isEndless && !this.anomaliesStarted) {
+            const rustMinutes = this.settings.rustMins !== undefined ? this.settings.rustMins : 45;
+            const rustThresholdSeconds = (rustMinutes / 360) * this.settings.nightDurationSeconds;
 
-        if (!this.anomaliesStarted) {
             if (this.gameTimeSeconds >= rustThresholdSeconds) {
                 this.anomaliesStarted = true;
-                this.showToast('⚠️ 00:45 AM // EERSTE AFWIJKING GEDETECTEERD! HOUD DE CAMERA\'S IN DE GATEN');
+                this.showToast('⚠️ 00:45 AM // EERSTE AFWIJKING GEDETECTEERD! HOUD DE CAMERA\'S IN DE GATEN', 'warning');
                 this.audio.playBlackout();
                 this.spawnRandomAnomaly();
-                this.scheduleNextAnomaly();
+                this.scheduleNextAnomaly(true);
                 this.updateThreatLevelDisplay();
             } else {
                 // Update badge to clearly show live countdown
@@ -461,31 +478,31 @@ class SchoolSurveillanceGame {
         }
 
         // Base spawn intervals - more active pacing
-        let baseDelay = 13; // seconds (down from 22s)
-        if (this.settings.difficulty === 'easy') baseDelay = 19;
-        if (this.settings.difficulty === 'hard') baseDelay = 8;
+        let baseDelay = 10; // seconds (down from 13s)
+        if (this.settings.difficulty === 'easy') baseDelay = 16;
+        if (this.settings.difficulty === 'hard') baseDelay = 6;
 
         // If 2 anomalies are already active, add moderate buffer
         if (this.activeAnomalies.length >= 2) {
-            baseDelay += 4;
+            baseDelay += 3;
         }
 
         // If triggered after clearing an anomaly, schedule the next one quickly
         if (faster) {
-            baseDelay = Math.min(baseDelay, 7);
+            baseDelay = Math.min(baseDelay, 4);
         }
 
         // Later in the night (03:00+), increase frequency (up to 40% faster in endless)
         const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
         const speedMultiplier = Math.max(0.45, 1.0 - (Math.min(2.0, nightProgress) * 0.30));
 
-        const delay = (baseDelay * speedMultiplier + (Math.random() * 3 - 1.5)) * 1000;
+        const delay = (baseDelay * speedMultiplier + (Math.random() * 2.5 - 1.2)) * 1000;
 
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
         this.spawnTimeout = setTimeout(() => {
             this.spawnRandomAnomaly();
             this.scheduleNextAnomaly();
-        }, Math.max(5000, delay));
+        }, Math.max(3500, delay));
     }
 
     preloadAllImages() {
@@ -545,8 +562,11 @@ class SchoolSurveillanceGame {
         const otherRooms = pool.filter(a => a.targetRoom !== currentCamId);
         
         let chosen;
-        if (otherRooms.length > 0 && Math.random() < 0.70) {
+        if (otherRooms.length > 0 && Math.random() < 0.65) {
             chosen = otherRooms[Math.floor(Math.random() * otherRooms.length)];
+            // Subtle static flicker and blip to indicate activity on the CCTV network
+            this.triggerTemporaryGlitchBurst();
+            if (this.audio && this.audio.playBeep) this.audio.playBeep(280, 0.04);
         } else {
             chosen = pool[Math.floor(Math.random() * pool.length)];
             // If spawning in current room, give brief static flicker
@@ -746,11 +766,11 @@ class SchoolSurveillanceGame {
             badge.classList.add('threat-safe');
             badge.textContent = `VEILIG (${count}/${max})`;
         } else if (count === 1) {
-            badge.classList.add('threat-safe');
-            badge.textContent = `VERHOOGD (${count}/${max})`;
+            badge.classList.add('threat-warning');
+            badge.textContent = `AFWIJKING ACTIEF (1/${max})`;
         } else if (count === 2) {
             badge.classList.add('threat-warning');
-            badge.textContent = `WAARSCHUWING (${count}/${max})`;
+            badge.textContent = `WAARSCHUWING (2/${max})`;
         } else {
             badge.classList.add('threat-danger');
             badge.textContent = `ALARM OVERLOAD! (${count}/${max}) [${this.overloadSecondsLeft}s]`;
