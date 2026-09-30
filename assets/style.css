@@ -1,0 +1,1032 @@
+/* School Surveillance Duty - CCTV Style Theme */
+:root {
+    --cctv-green: #33ff66;
+    --cctv-amber: #ffaa22;
+    --cctv-red: #ff3333;
+    --cctv-cyan: #22eeff;
+    --bg-dark: #0a0c0e;
+    --panel-bg: rgba(12, 16, 20, 0.94);
+    --panel-border: #1e3a29;
+    --panel-border-active: #33ff66;
+    --font-cctv: 'Share Tech Mono', 'Courier New', monospace;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-dark);
+    color: #e0e6ed;
+    font-family: var(--font-cctv);
+    overflow: hidden;
+    position: relative;
+}
+
+/* Master Game Container */
+#game-wrapper {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #000;
+    position: relative;
+}
+
+/* Monitor Housing / CRT Bezel */
+#cctv-monitor {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #050708;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Camera Viewport Canvas & Container */
+#camera-viewport {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    background: #020304;
+}
+
+#camera-viewport:active {
+    cursor: grabbing;
+}
+
+/* Base Image and Anomaly Layers */
+#camera-feed-container {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center center;
+    transition: transform 0.05s ease-out;
+}
+
+#camera-base-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    transition: filter 0.3s ease;
+}
+
+/* Anomaly Overlays Container */
+#anomaly-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Teacher Sprite Element */
+.teacher-anomaly-sprite {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.95)) contrast(1.1);
+    animation: teacher-idle 4s ease-in-out infinite alternate;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+@keyframes teacher-idle {
+    0% { transform: translate(-50%, -100%) translateY(0); }
+    100% { transform: translate(-50%, -100%) translateY(2px); }
+}
+
+/* Object Anomaly Sprite */
+.object-anomaly-sprite {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    object-fit: contain;
+    pointer-events: none;
+}
+
+.floating-anomaly {
+    animation: balloon-float 3s ease-in-out infinite alternate;
+}
+
+@keyframes balloon-float {
+    0% { transform: translate(-50%, -100%) translateY(-3px) rotate(-1deg); }
+    100% { transform: translate(-50%, -100%) translateY(5px) rotate(1deg); }
+}
+
+/* Light Anomaly Overlay (Flicker / Blackout) */
+#light-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 25;
+    transition: opacity 0.15s ease;
+}
+
+.anomaly-flicker {
+    animation: light-flicker-anim 0.12s infinite;
+    background: rgba(0, 0, 0, 0.85);
+}
+
+@keyframes light-flicker-anim {
+    0% { opacity: 0.1; }
+    20% { opacity: 0.8; }
+    40% { opacity: 0.2; }
+    60% { opacity: 0.95; }
+    80% { opacity: 0.05; }
+    100% { opacity: 0.7; }
+}
+
+.anomaly-blackout {
+    opacity: 1 !important;
+}
+
+/* Noise & Static Glitch Canvas */
+#noise-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.14;
+    z-index: 30;
+}
+
+/* CRT Scanlines Overlay */
+.crt-scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.4) 50%
+    ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.03),
+        rgba(0, 255, 0, 0.01),
+        rgba(0, 0, 255, 0.03)
+    );
+    background-size: 100% 3px, 6px 100%;
+    z-index: 35;
+}
+
+/* Vignette & Lens Curvature Shadow */
+.cctv-vignette {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.85), inset 0 0 40px rgba(0, 0, 0, 0.95);
+    z-index: 36;
+}
+
+/* Filter Modes */
+.filter-cctv {
+    filter: contrast(1.15) brightness(0.9) saturate(0.7) sepia(0.08);
+}
+
+.filter-nightvision {
+    filter: brightness(1.2) contrast(1.3) hue-rotate(85deg) saturate(2.5) drop-shadow(0 0 8px #11ff44);
+}
+
+.filter-bw {
+    filter: grayscale(1) contrast(1.35) brightness(0.9);
+}
+
+.filter-raw {
+    filter: none;
+}
+
+/* Camera Switch Glitch Overlay */
+#switch-glitch-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: #fff;
+    opacity: 0;
+    z-index: 50;
+}
+
+.trigger-switch-glitch {
+    animation: switch-glitch-anim 0.18s ease-out;
+}
+
+@keyframes switch-glitch-anim {
+    0% { opacity: 0.8; background: #fff; }
+    25% { opacity: 0.9; background: #000; }
+    50% { opacity: 0.6; background: #33ff66; }
+    75% { opacity: 0.4; background: #000; }
+    100% { opacity: 0; }
+}
+
+/* CCTV On-Screen Display (OSD) */
+#cctv-osd {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 40;
+    padding: 18px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 14px;
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 6px rgba(51, 255, 102, 0.8), 0 0 2px #000;
+    color: var(--cctv-green);
+}
+
+.osd-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.osd-rec-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.rec-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: var(--cctv-red);
+    box-shadow: 0 0 8px var(--cctv-red);
+    animation: rec-blink 1.2s infinite;
+}
+
+@keyframes rec-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.15; }
+}
+
+.osd-cam-info {
+    text-align: right;
+}
+
+.osd-cam-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.osd-cam-code {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.osd-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.osd-clock-box {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.osd-time-main {
+    font-size: 26px;
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(51, 255, 102, 0.9);
+}
+
+.osd-shift-progress {
+    font-size: 11px;
+    color: var(--cctv-amber);
+}
+
+.osd-threat-box {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.threat-badge {
+    padding: 4px 10px;
+    border: 1px solid var(--cctv-green);
+    background: rgba(0, 30, 10, 0.6);
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.threat-safe {
+    color: var(--cctv-green);
+    border-color: var(--cctv-green);
+}
+
+.threat-warning {
+    color: var(--cctv-amber);
+    border-color: var(--cctv-amber);
+    background: rgba(40, 25, 0, 0.7);
+    animation: pulse-warning 1s infinite alternate;
+}
+
+.threat-danger {
+    color: var(--cctv-red);
+    border-color: var(--cctv-red);
+    background: rgba(50, 0, 0, 0.8);
+    animation: pulse-danger 0.6s infinite alternate;
+}
+
+@keyframes pulse-warning {
+    0% { opacity: 0.8; }
+    100% { opacity: 1; box-shadow: 0 0 10px var(--cctv-amber); }
+}
+
+@keyframes pulse-danger {
+    0% { opacity: 0.8; }
+    100% { opacity: 1; box-shadow: 0 0 16px var(--cctv-red); }
+}
+
+/* Bottom Control Panel & Dock */
+#control-dock {
+    height: 72px;
+    background: #090c0f;
+    border-top: 2px solid #16241b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 60;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.8);
+}
+
+/* Camera Switcher Buttons */
+.camera-nav-group {
+    display: flex;
+    gap: 8px;
+}
+
+.cam-btn {
+    background: #11181c;
+    border: 1px solid #23372c;
+    color: #9ab4a5;
+    padding: 8px 14px;
+    font-family: var(--font-cctv);
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cam-btn:hover {
+    background: #1a2822;
+    color: #fff;
+    border-color: var(--cctv-green);
+}
+
+.cam-btn.active {
+    background: #0f301d;
+    color: var(--cctv-green);
+    border-color: var(--cctv-green);
+    box-shadow: 0 0 10px rgba(51, 255, 102, 0.35);
+}
+
+.cam-key-hint {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: 10px;
+    color: var(--cctv-amber);
+    border: 1px solid #443311;
+}
+
+/* Center Action: Report Anomaly Button */
+.report-action-group {
+    display: flex;
+    align-items: center;
+}
+
+.btn-report-main {
+    background: linear-gradient(180deg, #b31d1d, #750f0f);
+    border: 2px solid #ff4d4d;
+    color: #ffffff;
+    font-family: var(--font-cctv);
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    padding: 10px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(255, 51, 51, 0.4);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-report-main:hover {
+    background: linear-gradient(180deg, #d42222, #941313);
+    box-shadow: 0 0 24px rgba(255, 51, 51, 0.7);
+    transform: scale(1.02);
+}
+
+.btn-report-main:active {
+    transform: scale(0.98);
+}
+
+/* Utility Tools Group */
+.utility-group {
+    display: flex;
+    gap: 8px;
+}
+
+.util-btn {
+    background: #11181c;
+    border: 1px solid #24352b;
+    color: #8c9e94;
+    padding: 8px 12px;
+    font-family: var(--font-cctv);
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.util-btn:hover {
+    background: #1c2b22;
+    color: #fff;
+    border-color: var(--cctv-green);
+}
+
+/* Slide-Up Report Tablet UI */
+#report-tablet-modal {
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 680px;
+    max-width: 95vw;
+    background: var(--panel-bg);
+    border: 2px solid var(--panel-border-active);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(51, 255, 102, 0.25);
+    z-index: 100;
+    transition: bottom 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+    padding: 20px 24px 28px 24px;
+    backdrop-filter: blur(10px);
+}
+
+#report-tablet-modal.open {
+    bottom: 0;
+}
+
+.tablet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #233f2d;
+    padding-bottom: 12px;
+    margin-bottom: 18px;
+}
+
+.tablet-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--cctv-green);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-close-tablet {
+    background: none;
+    border: none;
+    color: #7a9485;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.btn-close-tablet:hover {
+    color: #ff4d4d;
+}
+
+/* Step 1: Select Room */
+.report-section-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--cctv-amber);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.room-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.room-opt-btn {
+    background: #0f1619;
+    border: 1px solid #23372b;
+    color: #a0b5a8;
+    padding: 10px 8px;
+    border-radius: 6px;
+    font-family: var(--font-cctv);
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.room-opt-btn:hover {
+    background: #182820;
+    border-color: var(--cctv-green);
+    color: #fff;
+}
+
+.room-opt-btn.selected {
+    background: #123821;
+    border-color: var(--cctv-green);
+    color: var(--cctv-green);
+    box-shadow: 0 0 10px rgba(51, 255, 102, 0.3);
+}
+
+/* Step 2: Select Anomaly Category */
+.category-selector-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.cat-opt-btn {
+    background: #0f1619;
+    border: 1px solid #23372b;
+    color: #a0b5a8;
+    padding: 12px 6px;
+    border-radius: 6px;
+    font-family: var(--font-cctv);
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.cat-opt-btn:hover {
+    background: #182820;
+    border-color: var(--cctv-green);
+    color: #fff;
+}
+
+.cat-opt-btn.selected {
+    background: #123821;
+    border-color: var(--cctv-green);
+    color: var(--cctv-green);
+    box-shadow: 0 0 10px rgba(51, 255, 102, 0.3);
+}
+
+.cat-opt-icon {
+    font-size: 22px;
+}
+
+/* Submit Report Button */
+.tablet-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn-send-report {
+    flex: 1;
+    background: linear-gradient(180deg, #1b7a3e, #0e5227);
+    border: 2px solid var(--cctv-green);
+    color: #fff;
+    padding: 12px 0;
+    border-radius: 6px;
+    font-family: var(--font-cctv);
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-send-report:hover:not(:disabled) {
+    background: linear-gradient(180deg, #22994e, #136932);
+    box-shadow: 0 0 18px rgba(51, 255, 102, 0.5);
+}
+
+.btn-send-report:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: #555;
+    background: #222;
+}
+
+/* Report Progress & Scanner bar */
+#report-processing-box {
+    display: none;
+    margin-top: 14px;
+    text-align: center;
+}
+
+.scan-progress-bar-bg {
+    width: 100%;
+    height: 10px;
+    background: #07100b;
+    border: 1px solid #1a3826;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.scan-progress-bar-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #22aa44, #55ff77);
+    transition: width 0.1s linear;
+}
+
+/* Notification Toasts */
+#notification-toast {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(10, 15, 12, 0.95);
+    border: 2px solid var(--cctv-green);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(51, 255, 102, 0.3);
+    z-index: 120;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+#notification-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+#notification-toast.success {
+    border-color: var(--cctv-green);
+    color: var(--cctv-green);
+}
+
+#notification-toast.error {
+    border-color: var(--cctv-red);
+    color: var(--cctv-red);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 51, 51, 0.4);
+}
+
+/* Generic Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background: #0d1216;
+    border: 2px solid var(--cctv-green);
+    box-shadow: 0 0 35px rgba(51, 255, 102, 0.3);
+    border-radius: 8px;
+    width: 650px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 26px 30px;
+    color: #e0ece4;
+}
+
+.modal-card h2 {
+    color: var(--cctv-green);
+    margin-bottom: 16px;
+    font-size: 22px;
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid #1a3826;
+    padding-bottom: 10px;
+}
+
+.modal-card h3 {
+    color: var(--cctv-amber);
+    margin: 16px 0 8px 0;
+    font-size: 15px;
+}
+
+.modal-card p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #a4b8ad;
+    margin-bottom: 12px;
+}
+
+.btn-modal-close {
+    background: #15221b;
+    border: 1px solid var(--cctv-green);
+    color: var(--cctv-green);
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-cctv);
+    font-weight: bold;
+    font-size: 13px;
+    margin-top: 20px;
+    float: right;
+}
+
+.btn-modal-close:hover {
+    background: #1f3a2b;
+    color: #fff;
+}
+
+/* Teacher Manager Cards */
+.teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin: 15px 0;
+}
+
+.teacher-card {
+    background: #090e11;
+    border: 1px solid #1f3328;
+    border-radius: 6px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.teacher-preview-thumb {
+    width: 70px;
+    height: 110px;
+    object-fit: contain;
+    background: #040608;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border: 1px solid #182820;
+}
+
+.teacher-card-name {
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    word-break: break-word;
+}
+
+.teacher-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #3b1010;
+    border: 1px solid #ff4444;
+    color: #fff;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+}
+
+.teacher-upload-dropzone {
+    border: 2px dashed #284d37;
+    background: rgba(15, 30, 22, 0.4);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 15px 0;
+}
+
+.teacher-upload-dropzone:hover {
+    border-color: var(--cctv-green);
+    background: rgba(25, 45, 32, 0.6);
+}
+
+/* Start / Menu Screen */
+#title-screen-modal {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, rgba(12, 22, 17, 0.96) 0%, rgba(2, 4, 3, 0.99) 80%);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.title-box {
+    text-align: center;
+    max-width: 680px;
+}
+
+.title-logo-icon {
+    font-size: 50px;
+    margin-bottom: 10px;
+    animation: pulse-title 2s infinite alternate;
+}
+
+@keyframes pulse-title {
+    0% { transform: scale(1); filter: drop-shadow(0 0 5px var(--cctv-green)); }
+    100% { transform: scale(1.05); filter: drop-shadow(0 0 15px var(--cctv-green)); }
+}
+
+.title-main {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 4px;
+    text-shadow: 0 0 15px rgba(51, 255, 102, 0.7);
+    margin-bottom: 6px;
+}
+
+.title-sub {
+    font-size: 15px;
+    color: var(--cctv-green);
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+}
+
+.title-instructions {
+    background: rgba(10, 18, 14, 0.85);
+    border: 1px solid #1e3a29;
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #b5c7bd;
+    text-align: left;
+    margin-bottom: 24px;
+}
+
+.title-instructions ul {
+    margin-left: 20px;
+    margin-top: 8px;
+}
+
+.btn-start-game {
+    background: linear-gradient(180deg, #1f8a47, #0e5227);
+    border: 2px solid var(--cctv-green);
+    color: #fff;
+    font-family: var(--font-cctv);
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 2.5px;
+    padding: 14px 44px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(51, 255, 102, 0.4);
+    transition: all 0.2s ease;
+}
+
+.btn-start-game:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 35px rgba(51, 255, 102, 0.7);
+}
+
+/* Game Over & Victory Screens */
+#game-over-screen, #victory-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 350;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+#game-over-screen {
+    background: radial-gradient(circle at center, rgba(40, 5, 5, 0.98), #000);
+}
+
+#game-over-screen h1 {
+    font-size: 46px;
+    color: var(--cctv-red);
+    text-shadow: 0 0 25px rgba(255, 51, 51, 0.9);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+}
+
+#victory-screen {
+    background: radial-gradient(circle at center, rgba(10, 45, 25, 0.98), #000);
+}
+
+#victory-screen h1 {
+    font-size: 46px;
+    color: var(--cctv-green);
+    text-shadow: 0 0 25px rgba(51, 255, 102, 0.9);
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+}
+
+.stats-card {
+    background: rgba(15, 20, 24, 0.9);
+    border: 1px solid #335544;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 20px 0;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #cad8d0;
+    min-width: 320px;
+}
+
+.btn-replay {
+    background: #162c20;
+    border: 2px solid var(--cctv-green);
+    color: #fff;
+    font-family: var(--font-cctv);
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 1.5px;
+    transition: all 0.2s ease;
+}
+
+.btn-replay:hover {
+    background: #214732;
+    box-shadow: 0 0 20px rgba(51, 255, 102, 0.5);
+}

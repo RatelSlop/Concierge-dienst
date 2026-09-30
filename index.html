@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ik ben op conciërge dienst // CCTV Nachtdienst</title>
+    <!-- Google Fonts for authentic CCTV monospace terminal look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<div id="game-wrapper">
+
+    <!-- Top Security Monitor Viewport -->
+    <div id="cctv-monitor">
+        <div id="camera-viewport">
+            <!-- Scalable Feed Container (for Pan & Zoom) -->
+            <div id="camera-feed-container">
+                <img id="camera-base-img" src="assets/cameras/cam1_lockers.jpg" alt="CCTV Feed">
+                <!-- Anomaly Sprites Layer (Teachers, Objects) -->
+                <div id="anomaly-layer"></div>
+            </div>
+
+            <!-- Light Strobe / Blackout Anomaly Overlay -->
+            <div id="light-overlay"></div>
+
+            <!-- Dynamic Procedural Noise & Static Grain -->
+            <canvas id="noise-canvas"></canvas>
+
+            <!-- CRT Scanlines Texture -->
+            <div class="crt-scanlines"></div>
+
+            <!-- CCTV Lens Vignette & Barrel Curvature -->
+            <div class="cctv-vignette"></div>
+
+            <!-- Camera Switching Static Glitch Flash -->
+            <div id="switch-glitch-layer"></div>
+
+            <!-- CCTV On-Screen Display (OSD) -->
+            <div id="cctv-osd">
+                <div class="osd-top-row">
+                    <div class="osd-rec-box">
+                        <div class="rec-dot"></div>
+                        <span>● REC</span>
+                        <span id="osd-fps" style="font-size: 11px; opacity: 0.8; margin-left: 10px;">15.0 FPS</span>
+                    </div>
+                    <div class="osd-cam-info">
+                        <div id="osd-cam-title" class="osd-cam-title">CAM 01 // KLUISJESHAL & TRAP OOST</div>
+                        <div id="osd-cam-code" class="osd-cam-code">LOCATIE: KLUISJES // CODE: HAL-KL-01</div>
+                    </div>
+                </div>
+
+                <div class="osd-bottom-row">
+                    <div class="osd-clock-box">
+                        <div id="osd-clock-time" class="osd-time-main">00:00:00 AM</div>
+                        <div class="osd-shift-progress">CONCIËRGE NACHTDIENST 00:00 - 06:00 AM</div>
+                    </div>
+                    <div class="osd-threat-box">
+                        <div style="font-size: 10px; opacity: 0.8; margin-bottom: 2px;">DREIGINGSNIVEAU:</div>
+                        <div id="threat-badge" class="threat-badge threat-safe">VEILIG (0/4)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Control Panel / Security Dock -->
+    <div id="control-dock">
+        <!-- Camera Selector Buttons -->
+        <div class="camera-nav-group" id="cam-nav-group">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- Center Action Button: Melden -->
+        <div class="report-action-group">
+            <button id="btn-report-main" class="btn-report-main">
+                <span style="font-size: 18px;">⚠️</span>
+                <span>MELD ANOMALIE</span>
+                <span class="cam-key-hint">[SPATIE]</span>
+            </button>
+        </div>
+
+        <!-- Utility Buttons -->
+        <div class="utility-group">
+            <button id="btn-open-teachers" class="util-btn" title="Beheer docentenfoto's">👨‍🏫 Docenten</button>
+            <button id="btn-open-settings" class="util-btn" title="Instellingen en filters">⚙️ Opties</button>
+        </div>
+    </div>
+
+    <!-- Slide-Up Tactical Report Tablet -->
+    <div id="report-tablet-modal">
+        <div class="tablet-header">
+            <div class="tablet-title">
+                <span>📟</span>
+                <span>CENTRAAL BEVEILIGINGS RAPPORTAGESYSTEEM</span>
+            </div>
+            <button id="btn-close-tablet" class="btn-close-tablet" title="Sluiten">✕</button>
+        </div>
+
+        <div class="report-section-title">1. KIES LOCATIE VAN DE AFWIJKING:</div>
+        <div class="room-selector-grid" id="report-room-grid">
+            <!-- Populated via JS -->
+        </div>
+
+        <div class="report-section-title">2. KIES CATEGORIE VAN DE ANOMALIE:</div>
+        <div class="category-selector-grid" id="report-category-grid">
+            <!-- Populated via JS -->
+        </div>
+
+        <div class="tablet-actions">
+            <button id="btn-send-report" class="btn-send-report">VERSTUUR RAPPORT NAAR BEVEILIGING</button>
+        </div>
+
+        <div id="report-processing-box">
+            <div id="scan-status-text" style="font-size: 12px; color: var(--cctv-green);">RAPPORT WORDT ONDERZOCHT...</div>
+            <div class="scan-progress-bar-bg">
+                <div id="scan-progress-fill" class="scan-progress-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Popup -->
+    <div id="notification-toast"></div>
+
+    <!-- Title / Start Screen Modal -->
+    <div id="title-screen-modal">
+        <div class="title-box">
+            <div class="title-logo-icon">📹</div>
+            <h1 class="title-main">IK BEN OP CONCIËRGE DIENST</h1>
+            <div class="title-sub">ELZENDAAL // NACHTBEWAKING CAMERA POV</div>
+
+            <div class="title-instructions">
+                <strong>INSTRUCTIES VOOR DE CONCIËRGE:</strong>
+                <ul>
+                    <li>Je nachtdienst loopt van <strong>00:00 tot 06:00 uur</strong>.</li>
+                    <li>Schakel tussen de 4 camera's met de knoppen onderin of sneltoetsen <strong>[1], [2], [3], [4]</strong>.</li>
+                    <li>Gebruik je muiswiel om in te zoomen op verdachte plekken en sleep om rond te kijken!</li>
+                    <li>Zie je iets vreemds? Druk op <strong>[SPATIE]</strong> of klik op <strong>MELD ANOMALIE</strong>.</li>
+                    <li>Kies de juiste ruimte en anomalie-categorie (bijv. <em>Docent</em>, <em>Lichtstoring</em>, <em>Extra Object</em>).</li>
+                    <li><strong>Let op:</strong> Docenten dwalen stilletjes door de gangen en gluren om hoeken! Laat niet te veel afwijkingen tegelijk ontstaan (maximaal 4), anders raakt het bewakingssysteem overbelast!</li>
+                </ul>
+            </div>
+
+            <button id="btn-start-game" class="btn-start-game">START CONCIËRGE DIENST (00:00)</button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+        <h1>CONCIËRGE DIENST MISLUKT</h1>
+        <p id="gameover-reason" style="color: #ff9999; font-size: 16px; margin-bottom: 20px;">OVERVALT DOOR ANOMALIEËN</p>
+        
+        <div class="stats-card">
+            <div>Tijd overleefd: <strong id="stat-time-survived" style="color: #fff;">02:45 AM</strong></div>
+            <div>Rapporten verstuurd: <strong id="stat-reports-sent" style="color: #fff;">4</strong></div>
+            <div>Nauwkeurigheid: <strong id="stat-success-rate" style="color: var(--cctv-green);">75%</strong></div>
+        </div>
+
+        <button id="btn-restart-gameover" class="btn-replay">OPNIEUW PROBEREN</button>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen">
+        <h1>06:00 AM // OVERLEEFD!</h1>
+        <p style="color: #a4e6bd; font-size: 16px; margin-bottom: 20px;">De schoolbel luidt. De ochtend breekt aan en je conciërge nachtdienst is succesvol afgerond!</p>
+        
+        <div class="stats-card">
+            <div>Oordeel Conciërge Dienst: <strong style="color: var(--cctv-green); font-size: 18px;">UITSTEKEND (CIJFER 10)</strong></div>
+            <div>Totaal opgeloste anomalieën: <strong id="stat-vic-anomalies" style="color: #fff;">8</strong></div>
+            <div>Rapportage Nauwkeurigheid: <strong id="stat-vic-accuracy" style="color: var(--cctv-green);">100%</strong></div>
+            <div>Totaal aantal meldingen: <strong id="stat-vic-reports" style="color: #fff;">8</strong></div>
+        </div>
+
+        <button id="btn-restart-victory" class="btn-replay">NIEUWE DIENST STARTEN</button>
+    </div>
+
+    <!-- Preloaded Anomalies / Teacher Manager Modal -->
+    <div id="teacher-manager-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>📸 PRELOADED ANOMALIEËN & DOCENTEN</h2>
+            <p>Anomalieën in het spel werken via <strong>preloaded foto's</strong>. Zodra een anomalie optreedt, schakelt de camera naadloos over naar de foto met de afwijking. Wanneer je de melding indient, flitst de camera terug naar de standaardfoto!</p>
+
+            <h3>📸 EIGEN PRELOADED ANOMALIE / DOCENT TOEVOEGEN</h3>
+            <div id="teacher-dropzone" class="teacher-upload-dropzone">
+                <div style="font-size: 28px; margin-bottom: 6px;">📁</div>
+                <div><strong>Klik hier of sleep een preloaded foto met een docent/afwijking</strong></div>
+                <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">Ondersteunt JPG en PNG genomen vanuit dezelfde camerapositie</div>
+            </div>
+            <input type="file" id="teacher-file-input" accept="image/*" style="display: none;">
+
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+                <input type="text" id="teacher-name-input" placeholder="Beschrijving van de afwijking / naam docent" style="flex: 1; padding: 8px 12px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+            </div>
+
+            <h3>ACTIEVE DOCENTEN IN DE NACHT:</h3>
+            <div class="teacher-grid" id="teacher-cards-grid">
+                <!-- Cards rendered dynamically -->
+            </div>
+
+            <button id="btn-close-teachers" class="btn-modal-close">SLUITEN</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>⚙️ SURVEILLANCE INSTELLINGEN</h2>
+
+            <div style="display: flex; flex-direction: column; gap: 16px; margin: 20px 0;">
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">DUUR VAN DE NACHT (00:00 - 06:00):</label>
+                    <select id="setting-duration" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+                        <option value="180">Kort (3 minuten echte tijd)</option>
+                        <option value="360" selected>Normaal (6 minuten echte tijd)</option>
+                        <option value="540">Lang / Realistisch (9 minuten echte tijd)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">MOEILIJKHEIDSGRAAD / SPOOKGRAAD:</label>
+                    <select id="setting-difficulty" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+                        <option value="easy">Makkelijk (Minder frequente anomalieën)</option>
+                        <option value="normal" selected>Normaal (Klassieke Observation Duty spanning)</option>
+                        <option value="hard">Nachtmerrie (Veel docenten en snelle spawns!)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">CCTV BEELDMODUS / FILTER:</label>
+                    <select id="setting-filter" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+                        <option value="cctv" selected>Beveiligingscamera (CCTV Kleur)</option>
+                        <option value="nightvision">Nachtvisie (Infrarood Groen)</option>
+                        <option value="bw">Infrarood (Zwart / Wit)</option>
+                        <option value="raw">Natuurlijk / Heldere Foto's</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">GELUID & RADIO VOLUME:</label>
+                    <input type="range" id="setting-volume" min="0" max="1" step="0.05" value="0.7" style="width: 100%;">
+                </div>
+            </div>
+
+            <p style="font-size: 11px; opacity: 0.7;">Tip: Druk op <strong>[F]</strong> tijdens het spelen voor volledig scherm (fullscreen).</p>
+
+            <button id="btn-close-settings" class="btn-modal-close">OPSLAAN & SLUITEN</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- Scripts -->
+<script src="assets/audio.js?v=3.0"></script>
+<script src="assets/teacher_manager.js?v=3.0"></script>
+<script src="assets/anomalies_config.js?v=3.0"></script>
+<script src="assets/game.js?v=3.0"></script>
+
+</body>
+</html>
