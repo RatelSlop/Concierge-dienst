@@ -12,7 +12,8 @@ class SchoolSurveillanceGame {
             nightDurationSeconds: 360, // 6 minutes real time = 6 hours in-game
             difficulty: 'normal',       // easy (slow spawns), normal, hard (fast spawns)
             filterMode: 'cctv',         // cctv, nightvision, bw, raw
-            maxAnomalies: 3             // Strict cap: max 3 anomalies simultaneously!
+            maxAnomalies: 3,            // Strict cap: max 3 anomalies simultaneously!
+            rustMins: 45                // In-game minutes before anomalies start (default: 45 = 00:45 AM)
         };
 
         // Game State
@@ -129,6 +130,7 @@ class SchoolSurveillanceGame {
             
             // Settings controls
             selDuration: document.getElementById('setting-duration'),
+            selRustfase: document.getElementById('setting-rustfase'),
             selDifficulty: document.getElementById('setting-difficulty'),
             selFilter: document.getElementById('setting-filter'),
             volSlider: document.getElementById('setting-volume')
@@ -185,6 +187,11 @@ class SchoolSurveillanceGame {
         this.dom.selDuration.addEventListener('change', (e) => {
             this.settings.nightDurationSeconds = parseInt(e.target.value);
         });
+        if (this.dom.selRustfase) {
+            this.dom.selRustfase.addEventListener('change', (e) => {
+                this.settings.rustMins = parseInt(e.target.value);
+            });
+        }
         this.dom.selDifficulty.addEventListener('change', (e) => {
             this.settings.difficulty = e.target.value;
         });
@@ -232,6 +239,7 @@ class SchoolSurveillanceGame {
         this.isRunning = true;
         this.isPaused = false;
         this.gameTimeSeconds = 0;
+        this.anomaliesStarted = false;
         this.activeAnomalies = [];
         this.stats = {
             reportsTotal: 0,
@@ -241,6 +249,7 @@ class SchoolSurveillanceGame {
         };
         this.overloadSecondsLeft = 15;
         if (this.overloadTimer) clearInterval(this.overloadTimer);
+        if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
 
         // Reset score form states
         if (this.dom.gameoverPlayerName) this.dom.gameoverPlayerName.value = '';
@@ -258,19 +267,16 @@ class SchoolSurveillanceGame {
         if (this.clockInterval) clearInterval(this.clockInterval);
         this.clockInterval = setInterval(() => this.tickClock(), 1000);
 
-        // Rustfase from 00:00 to 00:45 AM: No anomalies!
-        this.showToast('DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERAS (GEEN AFWIJKINGEN TOT 00:45)');
-
-        // Schedule first anomaly spawn at exactly 00:45 AM
-        if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
-        const timeUntil0045 = (45 / 360) * this.settings.nightDurationSeconds;
-        this.spawnTimeout = setTimeout(() => {
-            if (this.isRunning) {
-                this.showToast('⚠️ 00:45 AM // NACHTDIENST INTENSIVERING: EERSTE AFWIJKINGEN GEDETECTEERD!');
-                this.spawnRandomAnomaly();
-                this.scheduleNextAnomaly();
-            }
-        }, timeUntil0045 * 1000);
+        const rustThreshold = ((this.settings.rustMins !== undefined ? this.settings.rustMins : 45) / 360) * this.settings.nightDurationSeconds;
+        if (rustThreshold <= 0) {
+            // Instant action
+            this.anomaliesStarted = true;
+            this.showToast('DIENST GESTART - 00:00 AM // HOUD DE CAMERA\'S IN DE GATEN!');
+            this.spawnRandomAnomaly();
+            this.scheduleNextAnomaly();
+        } else {
+            this.showToast(`DIENST GESTART - 00:00 AM // RUSTFASE: VERKEN DE CAMERA'S (START OM 00:45 AM)`);
+        }
     }
 
     tickClock() {
@@ -291,19 +297,43 @@ class SchoolSurveillanceGame {
         // Check for victory at 06:00 AM!
         if (this.gameTimeSeconds >= this.settings.nightDurationSeconds) {
             this.triggerVictory();
+            return;
+        }
+
+        // Rustfase check: transition to active anomalies at 00:45 AM
+        const rustMinutes = this.settings.rustMins !== undefined ? this.settings.rustMins : 45;
+        const rustThresholdSeconds = (rustMinutes / 360) * this.settings.nightDurationSeconds;
+
+        if (!this.anomaliesStarted) {
+            if (this.gameTimeSeconds >= rustThresholdSeconds) {
+                this.anomaliesStarted = true;
+                this.showToast('⚠️ 00:45 AM // EERSTE AFWIJKING GEDETECTEERD! HOUD DE CAMERA\'S IN DE GATEN');
+                this.audio.playBlackout();
+                this.spawnRandomAnomaly();
+                this.scheduleNextAnomaly();
+                this.updateThreatLevelDisplay();
+            } else {
+                // Update badge to clearly show live countdown
+                const secondsLeft = Math.max(0, Math.ceil(rustThresholdSeconds - this.gameTimeSeconds));
+                const badge = this.dom.threatBadge;
+                badge.className = 'threat-badge threat-safe';
+                badge.textContent = `RUSTFASE TOT 00:45 (${secondsLeft}s)`;
+            }
         }
 
         // Anomaly overload logic
-        if (this.activeAnomalies.length >= this.settings.maxAnomalies) {
-            this.overloadSecondsLeft -= 1;
-            this.updateThreatLevelDisplay(); // Live countdown on badge!
-            if (this.overloadSecondsLeft <= 0) {
-                this.triggerGameOver('OVERVALT DOOR ANOMALIEËN // MAXIMALE CAPACITEIT OVERSCHREDEN');
-            }
-        } else {
-            if (this.overloadSecondsLeft !== 15) {
-                this.overloadSecondsLeft = 15;
-                this.updateThreatLevelDisplay();
+        if (this.anomaliesStarted) {
+            if (this.activeAnomalies.length >= this.settings.maxAnomalies) {
+                this.overloadSecondsLeft -= 1;
+                this.updateThreatLevelDisplay(); // Live countdown on badge!
+                if (this.overloadSecondsLeft <= 0) {
+                    this.triggerGameOver('OVERVALT DOOR ANOMALIEËN // MAXIMALE CAPACITEIT OVERSCHREDEN');
+                }
+            } else {
+                if (this.overloadSecondsLeft !== 15) {
+                    this.overloadSecondsLeft = 15;
+                    this.updateThreatLevelDisplay();
+                }
             }
         }
 
@@ -315,38 +345,34 @@ class SchoolSurveillanceGame {
     }
 
     scheduleNextAnomaly() {
-        if (!this.isRunning) return;
-
-        // If before 00:45 AM, do NOT schedule spawns yet
-        const threshold0045 = (45 / 360) * this.settings.nightDurationSeconds;
-        if (this.gameTimeSeconds < threshold0045) return;
+        if (!this.isRunning || !this.anomaliesStarted) return;
 
         // If already at max anomalies (3), pause spawns until player resolves one
         if (this.activeAnomalies.length >= this.settings.maxAnomalies) {
             return;
         }
 
-        // Base spawn intervals - comfortable pacing so player is not overwhelmed!
-        let baseDelay = 28; // seconds
-        if (this.settings.difficulty === 'easy') baseDelay = 38;
-        if (this.settings.difficulty === 'hard') baseDelay = 18;
+        // Base spawn intervals - comfortable pacing
+        let baseDelay = 22; // seconds
+        if (this.settings.difficulty === 'easy') baseDelay = 32;
+        if (this.settings.difficulty === 'hard') baseDelay = 14;
 
         // If 2 anomalies are already active, add extra breathing room!
         if (this.activeAnomalies.length >= 2) {
-            baseDelay += 15;
+            baseDelay += 12;
         }
 
         // Later in the night (03:00+), slightly increase frequency (up to 25% faster)
         const nightProgress = this.gameTimeSeconds / this.settings.nightDurationSeconds;
         const speedMultiplier = 1.0 - (nightProgress * 0.25);
 
-        const delay = (baseDelay * speedMultiplier + (Math.random() * 6 - 3)) * 1000;
+        const delay = (baseDelay * speedMultiplier + (Math.random() * 4 - 2)) * 1000;
 
         if (this.spawnTimeout) clearTimeout(this.spawnTimeout);
         this.spawnTimeout = setTimeout(() => {
             this.spawnRandomAnomaly();
             this.scheduleNextAnomaly();
-        }, Math.max(12000, delay));
+        }, Math.max(8000, delay));
     }
 
     preloadAllImages() {
@@ -366,10 +392,6 @@ class SchoolSurveillanceGame {
 
     spawnRandomAnomaly() {
         if (!this.isRunning) return;
-
-        // Strictly check 00:45 AM threshold
-        const threshold0045 = (45 / 360) * this.settings.nightDurationSeconds;
-        if (this.gameTimeSeconds < threshold0045) return;
 
         // Strict limit: NEVER exceed maxAnomalies (3)
         if (this.activeAnomalies.length >= this.settings.maxAnomalies) return;
@@ -591,9 +613,20 @@ class SchoolSurveillanceGame {
     }
 
     updateThreatLevelDisplay() {
+        const rustMinutes = this.settings.rustMins !== undefined ? this.settings.rustMins : 45;
+        const rustThresholdSeconds = (rustMinutes / 360) * this.settings.nightDurationSeconds;
+        const badge = this.dom.threatBadge;
+
+        if (!this.anomaliesStarted && this.gameTimeSeconds < rustThresholdSeconds && rustThresholdSeconds > 0) {
+            const secondsLeft = Math.max(0, Math.ceil(rustThresholdSeconds - this.gameTimeSeconds));
+            badge.className = 'threat-badge threat-safe';
+            badge.textContent = `RUSTFASE TOT 00:45 (${secondsLeft}s)`;
+            this.audio.setDangerLevel(0);
+            return;
+        }
+
         const count = this.activeAnomalies.length;
         const max = this.settings.maxAnomalies;
-        const badge = this.dom.threatBadge;
 
         badge.className = 'threat-badge';
         if (count === 0) {

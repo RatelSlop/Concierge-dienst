@@ -246,6 +246,15 @@
                 </div>
 
                 <div>
+                    <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">RUSTFASE VOORDAT ANOMALIEËN STARTEN:</label>
+                    <select id="setting-rustfase" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
+                        <option value="45" selected>Standaard (rust tot 00:45 AM om camera's te verkennen)</option>
+                        <option value="15">Kort (rust tot 00:15 AM)</option>
+                        <option value="0">Geen rust (direct om 00:00 AM anomalieën!)</option>
+                    </select>
+                </div>
+
+                <div>
                     <label style="display: block; font-size: 12px; color: var(--cctv-amber); margin-bottom: 4px;">MOEILIJKHEIDSGRAAD / SPOOKGRAAD:</label>
                     <select id="setting-difficulty" style="width: 100%; padding: 8px; background: #070a0c; border: 1px solid #1a3324; color: #fff; border-radius: 4px; font-family: var(--font-cctv);">
                         <option value="easy">Makkelijk (Minder frequente anomalieën)</option>
@@ -279,10 +288,10 @@
 </div>
 
 <!-- Scripts -->
-<script src="assets/audio.js?v=4.0"></script>
-<script src="assets/teacher_manager.js?v=4.0"></script>
-<script src="assets/anomalies_config.js?v=4.0"></script>
-<script src="assets/game.js?v=4.0"></script>
+<script src="assets/audio.js?v=4.1"></script>
+<script src="assets/teacher_manager.js?v=4.1"></script>
+<script src="assets/anomalies_config.js?v=4.1"></script>
+<script src="assets/game.js?v=4.1"></script>
 
 </body>
 </html>
